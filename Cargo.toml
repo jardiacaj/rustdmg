@@ -1,0 +1,8 @@
+[package]
+name = "rustdmg"
+version = "0.1.0"
+authors = ["Joan Ardiaca Jové <joan.ardiaca@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+file-utils = "0.1.5"
