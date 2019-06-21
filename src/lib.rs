@@ -1,20 +1,108 @@
 pub mod rustdmg {
     pub mod dmg {
-        use super::cartridge;
+        use super::cartridge::Cartridge;
+        use super::memory;
+        use super::memory::Memory;
+        use super::cpu::CPU;
 
-        pub fn run(rom_file_path: &str) {
-            let cartridge = match cartridge::Cartridge::read_cartridge_from_romfile(rom_file_path) {
-                Err(e) => panic!("Failed to read cartridge"),
-                Ok(cartridge) => cartridge
-            };
+        pub struct DMG {
+            cpu: CPU,
+        }
+
+        impl DMG {
+            pub fn run_rom(rom_file_path: &str) -> DMG {
+                let mut dmg = DMG::init(rom_file_path);
+                dmg.run();
+                dmg
+            }
+
+            pub fn init(rom_file_path: &str) -> DMG {
+                let cartridge = match Cartridge::read_cartridge_from_romfile(rom_file_path) {
+                    Err(e) => panic!("Failed to read cartridge"),
+                    Ok(cartridge) => cartridge
+                };
+                let boot_rom = match memory::read_boot_rom_from_romfile("DMG_ROM.bin") {
+                    Err(e) => panic!("Failed to read boot ROM"),
+                    Ok(boot_rom) => boot_rom
+                };
+                let memory = memory::Memory{
+                    boot_rom,
+                    cartridge,
+                };
+                let cpu = CPU::create(memory);
+                DMG {
+                    cpu,
+                }
+            }
+
+            pub fn run(&mut self) {
+                loop {
+                    self.cpu.step();
+                }
+            }
         }
     }
+
+    mod cpu {
+        use super::memory::Memory;
+
+        pub struct CPU {
+            flag_carry: bool,
+            flag_half_carry: bool,
+            flag_negative: bool,
+            flag_zero: bool,
+            reg_a: u8,
+            reg_bc: u16,
+            reg_de: u16,
+            reg_hl: u16,
+            stack_pointer: u16,
+            program_counter: u16,
+            memory: Memory,
+        }
+
+        impl CPU {
+            pub fn create(memory: Memory) -> CPU {
+                CPU{
+                    flag_carry: false,
+                    flag_half_carry: false,
+                    flag_negative: false,
+                    flag_zero: false,
+                    reg_a: 0,
+                    reg_bc: 0,
+                    reg_de: 0,
+                    reg_hl: 0,
+                    stack_pointer: 0,
+                    program_counter: 0,
+                    memory,
+                }
+            }
+
+            fn pop_op_from_pc(&mut self) -> u8 {
+                let pc = self.program_counter;
+                self.program_counter += 1;
+                self.memory.read(pc)
+            }
+
+            fn run_op(&mut self) {
+                let op = self.pop_op_from_pc();
+                println!("OP: {:X?}", op);
+                match self.pop_op_from_pc() {
+                    0x31 => ld_sp_d16(),
+                    _ => panic!("Bad opcode {:X?}", op),
+                }
+            }
+
+            pub fn step(&mut self) {
+                println!("PC: {:X?}", self.program_counter);
+                self.run_op()
+            }
+        }
+    }
+
     mod cartridge {
         use std::fs;
-        use std::io;
         use std::io::Read;
         use std::str;
-        use std::collections::HashMap;
 
         const ROM_BANK_SIZE: usize = 0x4000;
 
@@ -23,7 +111,7 @@ pub mod rustdmg {
             pub supported: bool,
         }
 
-        pub struct RomSize {
+        pub struct CartridgeRomSize {
             pub name: String,
             pub num_banks: u8,
         }
@@ -46,15 +134,16 @@ pub mod rustdmg {
                 }
 
                 let mut file = fs::File::open(rom_file_path).unwrap();
-                let mut file_content: Vec<u8> = Vec::new();
+                let mut file_content: Vec<u8> = Vec::with_capacity(file_metadata.len() as usize);
                 file.read_to_end(&mut file_content).unwrap();
 
                 Ok(Cartridge::parse_cartridge_from_blob(file_content))
             }
 
             fn parse_cartridge_from_blob(blob: Vec<u8>) -> Cartridge {
-                let mut rom_banks: Vec<Vec<u8>> = Vec::new();
                 let num_banks_in_file = blob.len() / ROM_BANK_SIZE;
+                let mut rom_banks: Vec<Vec<u8>> = Vec::with_capacity(num_banks_in_file);
+
                 for bank_index in 0..num_banks_in_file {
                     let bank_start_pos = bank_index * ROM_BANK_SIZE;
                     let bank_end_pos = (bank_index + 1) * ROM_BANK_SIZE;
@@ -122,18 +211,18 @@ pub mod rustdmg {
                 }
             }
 
-            pub fn get_rom_size(&self) -> RomSize {
+            pub fn get_rom_size(&self) -> CartridgeRomSize {
                 match self.rom_banks[0][0x0148] {
-                    0x00 => RomSize{name:"256Kbit".to_string(), num_banks: 2},
-                    0x01 => RomSize{name:"512Kbit".to_string(), num_banks: 4},
-                    0x02 => RomSize{name:"1Mbit".to_string(), num_banks: 8},
-                    0x03 => RomSize{name:"2Mbit".to_string(), num_banks: 16},
-                    0x04 => RomSize{name:"4Mbit".to_string(), num_banks: 32},
-                    0x05 => RomSize{name:"8Mbit".to_string(), num_banks: 64},
-                    0x06 => RomSize{name:"16Mbit".to_string(), num_banks: 128},
-                    0x52 => RomSize{name:"9Mbit".to_string(), num_banks: 72},
-                    0x53 => RomSize{name:"10Mbit".to_string(), num_banks: 80},
-                    0x54 => RomSize{name:"12Mbit".to_string(), num_banks: 96},
+                    0x00 => CartridgeRomSize {name:"256Kbit".to_string(), num_banks: 2},
+                    0x01 => CartridgeRomSize {name:"512Kbit".to_string(), num_banks: 4},
+                    0x02 => CartridgeRomSize {name:"1Mbit".to_string(), num_banks: 8},
+                    0x03 => CartridgeRomSize {name:"2Mbit".to_string(), num_banks: 16},
+                    0x04 => CartridgeRomSize {name:"4Mbit".to_string(), num_banks: 32},
+                    0x05 => CartridgeRomSize {name:"8Mbit".to_string(), num_banks: 64},
+                    0x06 => CartridgeRomSize {name:"16Mbit".to_string(), num_banks: 128},
+                    0x52 => CartridgeRomSize {name:"9Mbit".to_string(), num_banks: 72},
+                    0x53 => CartridgeRomSize {name:"10Mbit".to_string(), num_banks: 80},
+                    0x54 => CartridgeRomSize {name:"12Mbit".to_string(), num_banks: 96},
                     _ => panic!("Invalid rom size"),
                 }
             }
@@ -141,40 +230,76 @@ pub mod rustdmg {
     }
 
     mod memory {
+        use std::fs;
+        use std::io::Read;
         use super::cartridge::Cartridge;
 
-        struct Memory {
-            ordered_zones: Vec<MemoryZone>,
-            rom_bank_fixed: MemoryZone,
-            rom_bank_switchable: MemoryZone,
-            vram: MemoryZone,
-            cartridge_ram: MemoryZone,
-            work_ram_fixed: MemoryZone,
-            work_ram_switchable: MemoryZone,
-            work_ram_echo: MemoryZone,
-            oam: MemoryZone,
-            not_usable: MemoryZone,
-            io_ram: MemoryZone,
-            hi_ram: MemoryZone,
-            interrupt_enable_register: MemoryZone,
+        const BOOT_ROM_SIZE: usize = 256;
+
+        pub fn read_boot_rom_from_romfile(boot_rom_file_path: &str) -> Result<MemoryZone, String> {
+            let file_metadata = match fs::metadata(boot_rom_file_path) {
+                Err(e) => return Err(e.to_string()),
+                Ok(file_metadata) => file_metadata,
+            };
+
+            if file_metadata.len() as usize != BOOT_ROM_SIZE {
+                return Err("Bad boot ROM file size".to_string());
+            }
+
+            let mut file = fs::File::open(boot_rom_file_path).expect("Failed to open boot rom");
+            let mut data: Vec<u8> = Vec::new();
+            file.read_to_end(&mut data).unwrap();
+
+            Ok(
+                MemoryZone{
+                    name: "Boot ROM".to_string(),
+                    data,
+                    offset: 0,
+                    size: BOOT_ROM_SIZE as u16,
+                }
+            )
+        }
+
+        pub struct Memory {
+            pub boot_rom: MemoryZone,
+            pub cartridge: Cartridge,
+//            rom_bank_fixed: MemoryZone,
+//            rom_bank_switchable: MemoryZone,
+//            vram: MemoryZone,
+//            cartridge_ram: MemoryZone,
+//            work_ram_fixed: MemoryZone,
+//            work_ram_switchable: MemoryZone,
+//            work_ram_echo: MemoryZone,
+//            oam: MemoryZone,
+//            not_usable: MemoryZone,
+//            io_ram: MemoryZone,
+//            hi_ram: MemoryZone,
+//            interrupt_enable_register: MemoryZone,
         }
 
         impl Memory {
-            fn create(cartridge: Cartridge) {
-                //                Memory {
-                //                    rom_bank_fixed: MemoryZone {
-                //                        name: "Fixed ROM bank",
-                //                        offset: 0,
-                //                        size: 0x4000
-                //                    }
-                //                }
+            pub fn create(boot_rom: MemoryZone, cartridge: Cartridge) -> Memory {
+                Memory {
+                    boot_rom,
+                    cartridge
+                }
             }
+
+            pub fn read(&self, address: u16) -> u8 {
+                self.boot_rom.data[address as usize]
+            }
+
+            pub fn write(&mut self, address: u16, value: u8) {
+                self.boot_rom.data[address as usize] = value;
+            }
+
         }
 
-        struct MemoryZone {
+        pub struct MemoryZone {
             name: String,
             offset: u16,
             size: u16,
+            data: Vec<u8>,
         }
     }
 
