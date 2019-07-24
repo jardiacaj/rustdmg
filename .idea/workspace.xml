@@ -5,7 +5,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="77534023-f48c-484c-890f-135cfd6c2296" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib.rs" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -37,8 +36,12 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/lib.rs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="387">
-              <caret line="105" column="83" selection-start-line="105" selection-start-column="83" selection-end-line="105" selection-end-column="83" />
+            <state relative-caret-position="140">
+              <caret line="7" lean-forward="true" selection-start-line="7" selection-end-line="7" />
+              <folding>
+                <element signature="e#55#56#0" expanded="true" />
+                <element signature="e#82#83#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -80,6 +83,7 @@
       <find>!vec!</find>
       <find>&lt;'a&gt;</find>
       <find>MemoryZone</find>
+      <find>match</find>
     </findStrings>
     <replaceStrings>
       <replace>false}</replace>
@@ -182,12 +186,12 @@
       <workItem from="1560953700553" duration="13685000" />
       <workItem from="1561015883294" duration="631000" />
       <workItem from="1561044729710" duration="16092000" />
-      <workItem from="1563986897931" duration="2338000" />
+      <workItem from="1563986897931" duration="2843000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="41915000" />
+    <option name="totallyTimeSpent" value="42420000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="20" width="1366" height="748" extended-state="0" />
@@ -282,8 +286,12 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/lib.rs">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="387">
-          <caret line="105" column="83" selection-start-line="105" selection-start-column="83" selection-end-line="105" selection-end-column="83" />
+        <state relative-caret-position="140">
+          <caret line="7" lean-forward="true" selection-start-line="7" selection-end-line="7" />
+          <folding>
+            <element signature="e#55#56#0" expanded="true" />
+            <element signature="e#82#83#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
