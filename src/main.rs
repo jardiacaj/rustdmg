@@ -5,7 +5,7 @@ use std::io::Read;
 extern crate blit;
 
 fn main() {
-    use rustdmg::rustdmg::dmg;
+    use rustdmg::dmg;
 
     println!("rustdmg");
 
