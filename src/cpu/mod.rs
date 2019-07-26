@@ -1,7 +1,10 @@
+pub mod register;
+
 use super::memory::Memory;
 use super::memory::MemoryZone;
+use register::*;
 
-const INSTRUCTIONS_NOCB: [Instruction; 7] = [
+const INSTRUCTIONS_NOCB: [Instruction; 8] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation", is_cb: false,
         length_in_bytes: 1, cycles: 4, flags_changed: "",
         implementation: |cpu| return },
@@ -19,13 +22,17 @@ const INSTRUCTIONS_NOCB: [Instruction; 7] = [
         implementation: |cpu| panic!("Not implemented") },
 
 
+    Instruction{opcode: 0x21, mnemonic: "LD HL,d16", description: "Load immediate to HL", is_cb: false,
+        length_in_bytes: 3, cycles: 12, flags_changed: "",
+        implementation: |cpu| cpu.reg_hl.value = cpu.pop_u16_from_pc() },
+
     Instruction{opcode: 0x31, mnemonic: "LD SP,d16", description: "Load immediate to SP", is_cb: false,
         length_in_bytes: 3, cycles: 12, flags_changed: "",
-        implementation: |cpu| cpu.stack_pointer = cpu.pop_u16_from_pc() },
+        implementation: |cpu| cpu.stack_pointer.value = cpu.pop_u16_from_pc() },
 
     Instruction{opcode: 0xAF, mnemonic: "XOR A", description: "XOR A with A (zeroes A)", is_cb: false,
         length_in_bytes: 1, cycles: 4, flags_changed: "Z000",
-        implementation: |cpu| cpu.reg_a = 0 },
+        implementation: |cpu| cpu.reg_a.value = 0 },
 
 ];
 
@@ -45,12 +52,12 @@ pub struct CPU {
     flag_half_carry: bool,
     flag_negative: bool,
     flag_zero: bool,
-    reg_a: u8,
-    reg_bc: u16,
-    reg_de: u16,
-    reg_hl: u16,
-    stack_pointer: u16,
-    program_counter: u16,
+    reg_a: Register8bit,
+    reg_bc: Register16bit,
+    reg_de: Register16bit,
+    reg_hl: Register16bit,
+    stack_pointer: Register16bit,
+    program_counter: Register16bit,
     memory: Memory,
 }
 
@@ -61,19 +68,19 @@ impl CPU {
             flag_half_carry: false,
             flag_negative: false,
             flag_zero: false,
-            reg_a: 0,
-            reg_bc: 0,
-            reg_de: 0,
-            reg_hl: 0,
-            stack_pointer: 0,
-            program_counter: 0,
+            reg_a: Register8bit{value: 0},
+            reg_bc: Register16bit{value: 0},
+            reg_de: Register16bit{value: 0},
+            reg_hl: Register16bit{value: 0},
+            stack_pointer: Register16bit{value: 0},
+            program_counter: Register16bit{value: 0},
             memory,
         }
     }
 
     fn pop_u8_from_pc(&mut self) -> u8 {
-        let result = self.memory.read(self.program_counter);
-        self.program_counter += 1;
+        let result = self.memory.read(self.program_counter.value);
+        self.program_counter.value += 1;
         result
     }
 
@@ -106,7 +113,7 @@ impl CPU {
     }
 
     pub fn step(&mut self) {
-        println!("PC: {:X?}", self.program_counter);
+        println!("PC: {:X?}", self.program_counter.value);
         self.run_op()
     }
 }
@@ -119,8 +126,22 @@ mod tests {
     #[test]
     fn xor_a() {
         let mut cpu = CPU::create(Memory::new_from_vec(vec![0xAF]));
-        cpu.reg_a = 0x4F;
+        cpu.reg_a.value = 0x4F;
         cpu.step();
-        assert_eq!(cpu.reg_a, 0);
+        assert_eq!(cpu.reg_a.value, 0);
+    }
+
+    #[test]
+    fn ld_hl_d16() {
+        let mut cpu = CPU::create(Memory::new_from_vec(vec![0x21, 0x34, 0x12]));
+        cpu.step();
+        assert_eq!(cpu.reg_hl.value, 0x1234);
+    }
+
+    #[test]
+    fn ld_sp_d16() {
+        let mut cpu = CPU::create(Memory::new_from_vec(vec![0x31, 0x34, 0x12]));
+        cpu.step();
+        assert_eq!(cpu.stack_pointer.value, 0x1234);
     }
 }
