@@ -8,7 +8,7 @@ pub struct DMG {
 }
 
 impl DMG {
-    pub fn new(rom_file_path: &str) -> io::Result<DMG> {
+    pub fn new(rom_file_path: &String) -> io::Result<DMG> {
         let cartridge = Cartridge::read_cartridge_from_romfile(rom_file_path)?;
         let boot_rom = memory::BootROM::new("DMG_ROM.bin")?;
         let memory = memory::Memory{
