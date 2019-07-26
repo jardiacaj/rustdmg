@@ -9,7 +9,7 @@ fn main() {
 
     println!("rustdmg");
 
-    println!("Please enter rom file path");
+    println!("Please enter ROM file path");
     let mut rom_file_path = String::new();
     io::stdin()
         .read_line(&mut rom_file_path)
