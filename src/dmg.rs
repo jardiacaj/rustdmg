@@ -12,10 +12,7 @@ impl DMG {
     pub fn new(rom_file_path: &String) -> io::Result<DMG> {
         let cartridge = Cartridge::read_cartridge_from_romfile(rom_file_path)?;
         let boot_rom = BootROM::new("DMG_ROM.bin")?;
-        let memory = memory::Memory{
-            boot_rom,
-            cartridge,
-        };
+        let memory = memory::Memory::new(boot_rom, cartridge);
         let cpu = CPU::create(memory);
         Ok(DMG{cpu})
     }

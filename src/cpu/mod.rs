@@ -90,7 +90,7 @@ mod tests {
 
     #[test]
     fn xor_a() {
-        let mut cpu = CPU::create(Memory::new_from_vec(vec![0xAF]));
+        let mut cpu = CPU::create(Memory::new_from_vecs(vec![0xAF], vec![]));
         cpu.reg_a.value = 0x4F;
         cpu.step();
         assert_eq!(cpu.reg_a.value, 0);
@@ -99,21 +99,21 @@ mod tests {
 
     #[test]
     fn ld_hl_d16() {
-        let mut cpu = CPU::create(Memory::new_from_vec(vec![0x21, 0x34, 0x12]));
+        let mut cpu = CPU::create(Memory::new_from_vecs(vec![0x21, 0x34, 0x12], vec![]));
         cpu.step();
         assert_eq!(cpu.reg_hl.value, 0x1234);
     }
 
     #[test]
     fn ld_sp_d16() {
-        let mut cpu = CPU::create(Memory::new_from_vec(vec![0x31, 0x34, 0x12]));
+        let mut cpu = CPU::create(Memory::new_from_vecs(vec![0x31, 0x34, 0x12], vec![]));
         cpu.step();
         assert_eq!(cpu.stack_pointer.value, 0x1234);
     }
 
     #[test]
     fn ld_pointer_hl_a_and_decrement() {
-        let mut cpu = CPU::create(Memory::new_from_vec(vec![0x32]));
+        let mut cpu = CPU::create(Memory::new_from_vecs(vec![0x32], vec![]));
         cpu.reg_a.value = 0xF0;
         cpu.reg_hl.value = 0xC123;
         cpu.step();

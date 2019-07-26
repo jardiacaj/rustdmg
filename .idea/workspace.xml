@@ -5,11 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="77534023-f48c-484c-890f-135cfd6c2296" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/src/memory/bootrom.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/cpu/instruction.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/cpu/instruction.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/cpu/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/cpu/mod.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/dmg.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dmg.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/memory/bootrom.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/memory/bootrom.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/memory/cartridge.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/memory/cartridge.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/memory/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/memory/mod.rs" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -24,38 +24,6 @@
         <option value="Rust File" />
       </list>
     </option>
-  </component>
-  <component name="FindInProjectRecents">
-    <findStrings>
-      <find>Error</find>
-      <find>from_raw_parts</find>
-      <find>io::res</find>
-      <find>init</find>
-      <find>false)</find>
-      <find>create</find>
-      <find>fs</find>
-      <find>read_to_end</find>
-      <find>!vec!</find>
-      <find>&lt;'a&gt;</find>
-      <find>MemoryZone</find>
-      <find>ROM_BANK_SIZE</find>
-      <find>mod</find>
-      <find>if</find>
-      <find>.to_string()</find>
-      <find>panic</find>
-      <find>, fi, se</find>
-      <find>match</find>
-      <find>read_boot_rom_from_romfile</find>
-      <find>Result</find>
-      <find>Erro</find>
-      <find>Err</find>
-      <find>Err(</find>
-      <find>:X</find>
-      <find>from_ro</find>
-    </findStrings>
-    <replaceStrings>
-      <replace>false}</replace>
-    </replaceStrings>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -140,7 +108,7 @@
       <workItem from="1564133828092" duration="12045000" />
       <workItem from="1564153127815" duration="641000" />
       <workItem from="1564168832180" duration="77000" />
-      <workItem from="1564168936358" duration="4296000" />
+      <workItem from="1564168936358" duration="11242000" />
     </task>
     <servers />
   </component>

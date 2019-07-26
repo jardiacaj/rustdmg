@@ -1,9 +1,11 @@
+use super::MemoryZone;
+
 use std::fs;
 use std::io;
 use std::io::Read;
 use std::str;
 
-const ROM_BANK_SIZE: usize = 0x4000;
+pub const ROM_BANK_SIZE: usize = 0x4000;
 
 const CARTRIDGE_TYPES: [CartridgeType; 26] = [
     CartridgeType{code: 0x00, name:"ROM only", supported: true},
@@ -59,9 +61,30 @@ pub struct CartridgeRomSize<'a> {
     pub code: u8,
 }
 
+pub struct RomBank {
+    pub bank_number: u8,
+    pub data: Vec<u8>,
+}
+
+impl MemoryZone for RomBank {
+    fn read(&mut self, address: u16) -> u8 {
+        self.data[self.global_address_to_local_address(address) as usize]
+    }
+    fn write(&mut self, address: u16, value: u8) {
+        let local_address = self.global_address_to_local_address(address) as usize;
+        self.data[local_address] = value
+    }
+}
+
+impl RomBank {
+    fn global_address_to_local_address(&self, address: u16) -> u16 {
+        if self.bank_number == 0 { return address; } else { return address - 0x4000; }
+    }
+}
+
 pub struct Cartridge {
     pub name: String,
-    rom_banks: Vec<Vec<u8>>,
+    pub rom_banks: Vec<RomBank>,
     blob: Vec<u8>,
 }
 
@@ -85,15 +108,20 @@ impl Cartridge {
 
     fn parse_cartridge_from_blob(blob: Vec<u8>) -> io::Result<Cartridge> {
         let num_banks_in_file = blob.len() / ROM_BANK_SIZE;
-        let mut rom_banks: Vec<Vec<u8>> = Vec::with_capacity(num_banks_in_file);
+        let mut rom_banks: Vec<RomBank> = Vec::with_capacity(num_banks_in_file);
 
         for bank_index in 0..num_banks_in_file {
             let bank_start_pos = bank_index * ROM_BANK_SIZE;
             let bank_end_pos = (bank_index + 1) * ROM_BANK_SIZE;
-            rom_banks.push(blob[bank_start_pos..bank_end_pos].to_vec());
+            rom_banks.push(
+                RomBank{
+                    bank_number: bank_index as u8,
+                    data: blob[bank_start_pos..bank_end_pos].to_vec()
+                }
+            );
         }
 
-        let name = match str::from_utf8(&rom_banks[0][0x0134..0x0142]) {
+        let name = match str::from_utf8(&blob[0x0134..0x0142]) {
             Ok(v) => v.to_string(),
             Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid UTF8 in ROM name")),
         };
@@ -125,7 +153,7 @@ impl Cartridge {
     }
 
     pub fn get_cartridge_type(&self) -> io::Result<&CartridgeType> {
-        let type_code_in_rom = self.rom_banks[0][0x0147];
+        let type_code_in_rom = self.blob[0x0147];
         match CARTRIDGE_TYPES
             .iter()
             .find(|cart_type| cart_type.code == type_code_in_rom) {
@@ -137,7 +165,7 @@ impl Cartridge {
     }
 
     pub fn get_rom_size(&self) -> io::Result<&CartridgeRomSize> {
-        let type_size_in_rom = self.rom_banks[0][0x0148];
+        let type_size_in_rom = self.blob[0x0148];
 
         match CARTRIDGE_ROM_SIZES
             .iter()
