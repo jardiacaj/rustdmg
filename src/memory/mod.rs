@@ -3,8 +3,14 @@ pub mod cartridge;
 use std::fs;
 use std::io;
 use std::io::Read;
+use cartridge::Cartridge;
 
 const BOOT_ROM_SIZE: usize = 256;
+
+pub trait MemoryZone {
+    fn read(&self, address: u16) -> u8;
+    fn write(&mut self, address: u16, value: u8);
+}
 
 pub struct Memory {
     pub boot_rom: BootROM,
@@ -23,15 +29,17 @@ pub struct Memory {
 //            interrupt_enable_register: MemoryZone,
 }
 
-impl Memory {
-    pub fn read(&self, address: u16) -> u8 { self.boot_rom.read(address) }
-    pub fn write(&mut self, address: u16, value: u8) { self.boot_rom.write(address, value) }
-
+impl MemoryZone for Memory {
+    fn read(&self, address: u16) -> u8 { self.boot_rom.read(address) }
+    fn write(&mut self, address: u16, value: u8) { self.boot_rom.write(address, value) }
 }
 
-trait MemoryZone {
-    fn read(&self, address: u16) -> u8;
-    fn write(&self, address: u16, value: u8);
+impl Memory {
+    pub fn new_from_vec(data: Vec<u8>) -> Memory {
+        let size = data.len() as u16;
+        let boot_rom = BootROM{data, offset: 0, size};
+        Memory { boot_rom, cartridge: Cartridge::new_dummy_cartridge()}
+    }
 }
 
 pub struct BootROM {
@@ -64,5 +72,5 @@ impl BootROM {
 
 impl MemoryZone for BootROM {
     fn read(&self, address: u16) -> u8 { self.data[address as usize] }
-    fn write(&self, address: u16, value: u8) { panic!("Trying to write to boot ROM"); }
+    fn write(&mut self, address: u16, value: u8) { panic!("Trying to write to boot ROM"); }
 }

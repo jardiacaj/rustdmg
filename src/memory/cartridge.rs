@@ -66,6 +66,10 @@ pub struct Cartridge {
 }
 
 impl Cartridge {
+    pub fn new_dummy_cartridge() -> Cartridge {
+        Cartridge {name: "".to_string(), blob: vec![], rom_banks: vec![]}
+    }
+
     pub fn read_cartridge_from_romfile(rom_file_path: &str) -> io::Result<Cartridge> {
         let file_metadata = fs::metadata(rom_file_path)?;
 

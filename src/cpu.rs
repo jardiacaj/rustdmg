@@ -1,4 +1,5 @@
 use super::memory::Memory;
+use super::memory::MemoryZone;
 
 const INSTRUCTIONS_NOCB: [Instruction; 7] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation", is_cb: false,
@@ -107,5 +108,19 @@ impl CPU {
     pub fn step(&mut self) {
         println!("PC: {:X?}", self.program_counter);
         self.run_op()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CPU;
+    use super::super::memory::Memory;
+
+    #[test]
+    fn xor_a() {
+        let mut cpu = CPU::create(Memory::new_from_vec(vec![0xAF]));
+        cpu.reg_a = 0x4F;
+        cpu.step();
+        assert_eq!(cpu.reg_a, 0);
     }
 }
