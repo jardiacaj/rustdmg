@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 file-utils = "0.1.5"
 blit = "0.5"
+bitflags = "1.1.0"

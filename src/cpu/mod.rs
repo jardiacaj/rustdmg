@@ -5,12 +5,19 @@ use super::memory::Memory;
 use super::memory::MemoryZone;
 use register::*;
 use instruction::*;
+use bitflags::bitflags;
+
+bitflags! {
+    pub struct Flags: u8 {
+        const Z = 0b10000000;
+        const N = 0b01000000;
+        const H = 0b00100000;
+        const C = 0b00010000;
+    }
+}
 
 pub struct CPU {
-    flag_carry: bool,
-    flag_half_carry: bool,
-    flag_negative: bool,
-    flag_zero: bool,
+    flags: Flags,
     reg_a: Register8bit,
     reg_bc: Register16bit,
     reg_de: Register16bit,
@@ -23,10 +30,7 @@ pub struct CPU {
 impl CPU {
     pub fn create(memory: Memory) -> CPU {
         CPU{
-            flag_carry: false,
-            flag_half_carry: false,
-            flag_negative: false,
-            flag_zero: false,
+            flags: Flags{bits: 0},
             reg_a: Register8bit{value: 0},
             reg_bc: Register16bit{value: 0},
             reg_de: Register16bit{value: 0},
@@ -80,6 +84,7 @@ impl CPU {
 #[cfg(test)]
 mod tests {
     use super::CPU;
+    use super::Flags;
     use super::super::memory::Memory;
 
     #[test]
@@ -88,6 +93,7 @@ mod tests {
         cpu.reg_a.value = 0x4F;
         cpu.step();
         assert_eq!(cpu.reg_a.value, 0);
+        assert_eq!(cpu.flags, Flags::Z)
     }
 
     #[test]

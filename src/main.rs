@@ -4,7 +4,6 @@ use std::io;
 use std::io::Read;
 use rustdmg::dmg;
 
-extern crate blit;
 
 fn main() {
     println!("rustdmg");

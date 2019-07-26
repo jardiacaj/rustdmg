@@ -1,4 +1,5 @@
 use super::CPU;
+use super::Flags;
 
 pub const INSTRUCTIONS_NOCB: [Instruction; 8] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation", is_cb: false,
@@ -28,7 +29,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 8] = [
 
     Instruction{opcode: 0xAF, mnemonic: "XOR A", description: "XOR A with A (zeroes A)", is_cb: false,
         length_in_bytes: 1, cycles: 4, flags_changed: "Z000",
-        implementation: |cpu| cpu.reg_a.value = 0 },
+        implementation: |cpu| { cpu.reg_a.value = 0; cpu.flags.insert(Flags::Z) } },
 
 ];
 

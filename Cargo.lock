@@ -317,6 +317,7 @@ dependencies = [
 name = "rustdmg"
 version = "0.1.0"
 dependencies = [
+ "bitflags 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "blit 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "file-utils 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
