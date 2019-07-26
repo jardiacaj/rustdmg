@@ -28,8 +28,7 @@ const INSTRUCTIONS_NOCB: [Instruction; 7] = [
 
 ];
 
-pub struct Instruction <'a>
-{
+pub struct Instruction <'a> {
     is_cb: bool,
     opcode: u8,
     mnemonic: &'a str,
@@ -93,6 +92,8 @@ impl CPU {
         implementation(self);
     }
 
+    /// FIXME this should go away once all instructions are implemented, then opcodes will be
+    /// array indexes
     fn get_instruction_index_from_opcode(opcode: u8) -> usize {
         match INSTRUCTIONS_NOCB
             .iter()

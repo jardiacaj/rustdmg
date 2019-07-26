@@ -16,5 +16,6 @@ fn main() {
         .expect("Failed to read rom file path");
     let rom_file_path = rom_file_path.trim();
 
-    dmg::DMG::run_rom(rom_file_path);
+    let mut dmg = dmg::DMG::new(rom_file_path).unwrap();
+    dmg.run();
 }

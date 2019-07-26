@@ -1,23 +1,21 @@
 pub mod cartridge;
 
 use std::fs;
+use std::io;
 use std::io::Read;
 
 const BOOT_ROM_SIZE: usize = 256;
 
-pub fn read_boot_rom_from_romfile(boot_rom_file_path: &str) -> Result<BootROM, String> {
-    let file_metadata = match fs::metadata(boot_rom_file_path) {
-        Err(e) => return Err(e.to_string()),
-        Ok(file_metadata) => file_metadata,
-    };
+pub fn read_boot_rom_from_romfile(boot_rom_file_path: &str) -> io::Result<BootROM> {
+    let file_metadata = fs::metadata(boot_rom_file_path)?;
 
     if file_metadata.len() as usize != BOOT_ROM_SIZE {
-        return Err("Bad boot ROM file size".to_string());
+        return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "Bad boot ROM file size"));
     }
 
-    let mut file = fs::File::open(boot_rom_file_path).expect("Failed to open boot rom");
+    let mut file = fs::File::open(boot_rom_file_path)?;
     let mut data: Vec<u8> = Vec::new();
-    file.read_to_end(&mut data).unwrap();
+    file.read_to_end(&mut data)?;
 
     Ok(
         BootROM{

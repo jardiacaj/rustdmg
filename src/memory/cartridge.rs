@@ -1,4 +1,5 @@
 use std::fs;
+use std::io;
 use std::io::Read;
 use std::str;
 
@@ -65,24 +66,20 @@ pub struct Cartridge {
 }
 
 impl Cartridge {
-    pub fn read_cartridge_from_romfile(rom_file_path: &str) -> Result<Cartridge, String> {
-        let file_metadata = match fs::metadata(rom_file_path){
-            Err(e) => return Err(e.to_string()),
-            Ok(file_metadata) => file_metadata,
-        };
+    pub fn read_cartridge_from_romfile(rom_file_path: &str) -> io::Result<Cartridge> {
+        let file_metadata = fs::metadata(rom_file_path)?;
 
         if file_metadata.len() as usize % ROM_BANK_SIZE != 0 {
-            return Err("Bad romfile size".to_string());
+            return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "Bad cartridge ROM file size"));
         }
 
-        let mut file = fs::File::open(rom_file_path).unwrap();
+        let mut file = fs::File::open(rom_file_path)?;
         let mut file_content: Vec<u8> = Vec::with_capacity(file_metadata.len() as usize);
-        file.read_to_end(&mut file_content).unwrap();
-
-        Ok(Cartridge::parse_cartridge_from_blob(file_content))
+        file.read_to_end(&mut file_content)?;
+        Ok(Cartridge::parse_cartridge_from_blob(file_content)?)
     }
 
-    fn parse_cartridge_from_blob(blob: Vec<u8>) -> Cartridge {
+    fn parse_cartridge_from_blob(blob: Vec<u8>) -> io::Result<Cartridge> {
         let num_banks_in_file = blob.len() / ROM_BANK_SIZE;
         let mut rom_banks: Vec<Vec<u8>> = Vec::with_capacity(num_banks_in_file);
 
@@ -94,7 +91,7 @@ impl Cartridge {
 
         let name = match str::from_utf8(&rom_banks[0][0x0134..0x0142]) {
             Ok(v) => v.to_string(),
-            Err(e) => panic!("Invalid UTF-8 sequence in rom name: {}", e),
+            Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid UTF8 in ROM name")),
         };
 
         let cartridge = Cartridge {
@@ -103,8 +100,8 @@ impl Cartridge {
             name,
         };
 
-        let cartridge_type = cartridge.get_cartridge_type();
-        let rom_size = cartridge.get_rom_size();
+        let cartridge_type = cartridge.get_cartridge_type()?;
+        let rom_size = cartridge.get_rom_size()?;
 
         println!();
         println!("==============");
@@ -115,29 +112,36 @@ impl Cartridge {
         println!("==============");
 
         if !cartridge_type.supported {
-            panic!("Cartridge type {} unsupported", cartridge_type.name)
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Cartridge type {} unsupported", cartridge_type.name)))
         }
 
-        cartridge
+        Ok(cartridge)
     }
 
-    pub fn get_cartridge_type(&self) -> &CartridgeType {
-        let type_code = self.rom_banks[0][0x0147];
-
-        for cartridge_type_iterator in CARTRIDGE_TYPES.iter() {
-            if cartridge_type_iterator.code == type_code { return cartridge_type_iterator }
+    pub fn get_cartridge_type(&self) -> io::Result<&CartridgeType> {
+        let type_code_in_rom = self.rom_banks[0][0x0147];
+        match CARTRIDGE_TYPES
+            .iter()
+            .find(|cart_type| cart_type.code == type_code_in_rom) {
+            Some(cartridge_type) => return Ok(cartridge_type),
+            None => return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Cartridge type {:X?} unrecognized", type_code_in_rom))),
         }
-
-        panic!("Invalid cartridge type code: {:X?}", type_code);
     }
 
-    pub fn get_rom_size(&self) -> &CartridgeRomSize {
-        let type_size = self.rom_banks[0][0x0148];
+    pub fn get_rom_size(&self) -> io::Result<&CartridgeRomSize> {
+        let type_size_in_rom = self.rom_banks[0][0x0148];
 
-        for cartridge_size_iterator in CARTRIDGE_ROM_SIZES.iter() {
-            if cartridge_size_iterator.code == type_size { return cartridge_size_iterator }
+        match CARTRIDGE_ROM_SIZES
+            .iter()
+            .find(|cart_size| cart_size.code == type_size_in_rom) {
+            Some(cartridge_size) => return Ok(cartridge_size),
+            None => return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Cartridge size {:X?} unrecognized", type_size_in_rom))),
         }
-
-        panic!("Invalid rom size code: {:X?}", type_size);
     }
 }
