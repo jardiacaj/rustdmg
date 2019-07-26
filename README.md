@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/jardiacaj/rustdmg.svg?branch=master)](https://travis-ci.org/jardiacaj/rustdmg)
+
 # rustdmg
 
 My first Rust project. It is work in progress, not much to say for now.
