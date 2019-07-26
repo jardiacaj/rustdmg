@@ -5,7 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="77534023-f48c-484c-890f-135cfd6c2296" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/memory/bootrom.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/cpu/instruction.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/cpu/instruction.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/cpu/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/cpu/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/dmg.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dmg.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/memory/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/memory/mod.rs" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -57,11 +62,6 @@
   </component>
   <component name="MacroExpansionManager">
     <option name="directoryName" value="jHenNYVG" />
-  </component>
-  <component name="ProjectFrameBounds">
-    <option name="y" value="20" />
-    <option name="width" value="1366" />
-    <option name="height" value="748" />
   </component>
   <component name="ProjectId" id="1OYyRiusLFZfYs1woYL227N6nr2" />
   <component name="PropertiesComponent">
@@ -140,7 +140,7 @@
       <workItem from="1564133828092" duration="12045000" />
       <workItem from="1564153127815" duration="641000" />
       <workItem from="1564168832180" duration="77000" />
-      <workItem from="1564168936358" duration="2368000" />
+      <workItem from="1564168936358" duration="4296000" />
     </task>
     <servers />
   </component>

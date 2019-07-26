@@ -85,7 +85,8 @@ impl CPU {
 mod tests {
     use super::CPU;
     use super::Flags;
-    use super::super::memory::Memory;
+    use crate::memory::Memory;
+    use crate::memory::MemoryZone;
 
     #[test]
     fn xor_a() {
@@ -108,5 +109,15 @@ mod tests {
         let mut cpu = CPU::create(Memory::new_from_vec(vec![0x31, 0x34, 0x12]));
         cpu.step();
         assert_eq!(cpu.stack_pointer.value, 0x1234);
+    }
+
+    #[test]
+    fn ld_pointer_hl_a_and_decrement() {
+        let mut cpu = CPU::create(Memory::new_from_vec(vec![0x32]));
+        cpu.reg_a.value = 0xF0;
+        cpu.reg_hl.value = 0xC123;
+        cpu.step();
+        assert_eq!(cpu.memory.read(0xC123), 0xF0);
+        assert_eq!(cpu.reg_hl.value, 0xC122);
     }
 }
