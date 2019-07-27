@@ -25,11 +25,12 @@ pub struct CPU {
     stack_pointer: Register16bit,
     program_counter: Register16bit,
     memory: MemoryManager,
+    cycle_count: u64,
 }
 
 impl CPU {
     pub fn create(memory: MemoryManager) -> CPU {
-        CPU{
+        CPU {
             flags: Flags{bits: 0},
             reg_a: Register8bit{value: 0},
             reg_bc: Register16bit{value: 0},
@@ -38,6 +39,7 @@ impl CPU {
             stack_pointer: Register16bit{value: 0},
             program_counter: Register16bit{value: 0},
             memory,
+            cycle_count: 0,
         }
     }
 
@@ -99,70 +101,5 @@ impl CPU {
     pub fn step(&mut self) {
         println!("PC: {:02X}", self.program_counter.value);
         self.run_op()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::CPU;
-    use super::Flags;
-    use crate::memory::MemoryManager;
-    use crate::memory::MemoryZone;
-
-    #[test]
-    fn xor_a() {
-        let mut cpu = CPU::create(
-            MemoryManager::new_from_vecs(vec![0xAF], vec![]));
-        cpu.reg_a.value = 0x4F;
-        cpu.step();
-        assert_eq!(cpu.reg_a.value, 0);
-        assert_eq!(cpu.flags, Flags::Z)
-    }
-
-    #[test]
-    fn ld_hl_d16() {
-        let mut cpu = CPU::create(
-            MemoryManager::new_from_vecs(vec![0x21, 0x34, 0x12], vec![]));
-        cpu.step();
-        assert_eq!(cpu.reg_hl.value, 0x1234);
-    }
-
-    #[test]
-    fn ld_sp_d16() {
-        let mut cpu = CPU::create(
-            MemoryManager::new_from_vecs(vec![0x31, 0x34, 0x12], vec![]));
-        cpu.step();
-        assert_eq!(cpu.stack_pointer.value, 0x1234);
-    }
-
-    #[test]
-    fn ld_pointer_hl_a_and_decrement() {
-        let mut cpu = CPU::create(
-            MemoryManager::new_from_vecs(vec![0x32], vec![]));
-        cpu.reg_a.value = 0xF0;
-        cpu.reg_hl.value = 0xC123;
-        cpu.step();
-        assert_eq!(cpu.memory.read(0xC123), 0xF0);
-        assert_eq!(cpu.reg_hl.value, 0xC122);
-    }
-
-    #[test]
-    fn bit_7_h_to_one() {
-        let mut cpu = CPU::create(MemoryManager::new_from_vecs(vec![0xCB, 0x7C], vec![]));
-        cpu.reg_hl.value = 0xF000;
-        cpu.step();
-        assert!(!cpu.flags.contains(Flags::N));
-        assert!(cpu.flags.contains(Flags::H));
-        assert!(!cpu.flags.contains(Flags::Z));
-    }
-
-    #[test]
-    fn bit_7_h_to_zero() {
-        let mut cpu = CPU::create(MemoryManager::new_from_vecs(vec![0xCB, 0x7C], vec![]));
-        cpu.reg_hl.value = 0x0F00;
-        cpu.step();
-        assert!(!cpu.flags.contains(Flags::N));
-        assert!(cpu.flags.contains(Flags::H));
-        assert!(cpu.flags.contains(Flags::Z));
     }
 }
