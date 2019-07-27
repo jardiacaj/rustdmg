@@ -35,7 +35,7 @@ impl RAMBank {
     fn global_address_to_local_address(&self, address: u16) -> u16 { address - self.base_address }
 }
 
-pub struct Memory {
+pub struct MemoryManager {
     pub boot_rom_active: bool,
     pub boot_rom: BootROM,
     pub cartridge: cartridge::Cartridge,
@@ -55,7 +55,7 @@ pub struct Memory {
 //            interrupt_enable_register: MemoryZone,
 }
 
-impl Memory {
+impl MemoryManager {
     pub fn read(&mut self, address: u16) -> u8 {
         self.get_memory_zone_from_address(address).read(address)
     }
@@ -77,25 +77,25 @@ impl Memory {
         }
     }
 
-    pub fn new(boot_rom: BootROM, cartridge: Cartridge) -> Memory {
-        Memory {
+    pub fn new(boot_rom: BootROM, cartridge: Cartridge) -> MemoryManager {
+        MemoryManager {
             boot_rom_active: true,
             boot_rom,
             cartridge,
-            work_ram: Memory::new_work_ram(),
-            video_ram: Memory::new_video_ram(),
+            work_ram: MemoryManager::new_work_ram(),
+            video_ram: MemoryManager::new_video_ram(),
         }
     }
 
-    pub fn new_from_vecs(boot_rom_data: Vec<u8>, cart_rom_bank_zero_data: Vec<u8>) -> Memory {
+    pub fn new_from_vecs(boot_rom_data: Vec<u8>, cart_rom_bank_zero_data: Vec<u8>) -> MemoryManager {
         let size = boot_rom_data.len() as u16;
         let boot_rom = BootROM{data: boot_rom_data, offset: 0, size};
-        Memory {
+        MemoryManager {
             boot_rom_active: true,
             boot_rom,
             cartridge: Cartridge::new_dummy_cartridge(),
-            work_ram: Memory::new_work_ram(),
-            video_ram: Memory::new_video_ram(),
+            work_ram: MemoryManager::new_work_ram(),
+            video_ram: MemoryManager::new_video_ram(),
         }
     }
 
@@ -116,18 +116,18 @@ mod tests {
 
     #[test]
     fn get_boot_rom_zone() {
-        let mut memory = Memory::new_from_vecs(vec![0, 0x55], vec![]);
+        let mut memory = MemoryManager::new_from_vecs(vec![0, 0x55], vec![]);
         assert_eq!(memory.get_memory_zone_from_address(1).read(1), 0x55);
     }
     #[test]
     fn get_work_ram_zone() {
-        let mut memory = Memory::new_from_vecs(vec![], vec![]);
+        let mut memory = MemoryManager::new_from_vecs(vec![], vec![]);
         memory.work_ram.data[0x12] = 0xFF;
         assert_eq!(memory.get_memory_zone_from_address(0xC012).read(0xC012), 0xFF);
     }
     #[test]
     fn get_video_ram_zone() {
-        let mut memory = Memory::new_from_vecs(vec![], vec![]);
+        let mut memory = MemoryManager::new_from_vecs(vec![], vec![]);
         memory.video_ram.data[0x12] = 0xFF;
         assert_eq!(memory.get_memory_zone_from_address(0x8012).read(0x8012), 0xFF);
     }

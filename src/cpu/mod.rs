@@ -1,7 +1,7 @@
 pub mod register;
 pub mod instruction;
 
-use super::memory::Memory;
+use super::memory::MemoryManager;
 use super::memory::MemoryZone;
 use register::*;
 use instruction::*;
@@ -24,11 +24,11 @@ pub struct CPU {
     reg_hl: Register16bit,
     stack_pointer: Register16bit,
     program_counter: Register16bit,
-    memory: Memory,
+    memory: MemoryManager,
 }
 
 impl CPU {
-    pub fn create(memory: Memory) -> CPU {
+    pub fn create(memory: MemoryManager) -> CPU {
         CPU{
             flags: Flags{bits: 0},
             reg_a: Register8bit{value: 0},
@@ -56,7 +56,7 @@ impl CPU {
 
     fn run_op(&mut self) {
         let opcode = self.pop_u8_from_pc();
-        println!("OP: {:X?}", opcode);
+        println!("OP: {:02X}", opcode);
 
         let instruction_index = CPU::get_instruction_index_from_opcode(opcode);
         let implementation = INSTRUCTIONS_NOCB[instruction_index].implementation;
@@ -65,7 +65,7 @@ impl CPU {
 
     fn run_cb_op(&mut self) {
         let opcode = self.pop_u8_from_pc();
-        println!("CB OP: {:X?}", opcode);
+        println!("CB OP: {:02X}", opcode);
 
         let instruction_index = CPU::get_cb_instruction_index_from_opcode(opcode);
         let implementation = INSTRUCTIONS_CB[instruction_index].implementation;
@@ -97,7 +97,7 @@ impl CPU {
     }
 
     pub fn step(&mut self) {
-        println!("PC: {:X?}", self.program_counter.value);
+        println!("PC: {:02X}", self.program_counter.value);
         self.run_op()
     }
 }
@@ -106,13 +106,13 @@ impl CPU {
 mod tests {
     use super::CPU;
     use super::Flags;
-    use crate::memory::Memory;
+    use crate::memory::MemoryManager;
     use crate::memory::MemoryZone;
 
     #[test]
     fn xor_a() {
         let mut cpu = CPU::create(
-            Memory::new_from_vecs(vec![0xAF], vec![]));
+            MemoryManager::new_from_vecs(vec![0xAF], vec![]));
         cpu.reg_a.value = 0x4F;
         cpu.step();
         assert_eq!(cpu.reg_a.value, 0);
@@ -122,7 +122,7 @@ mod tests {
     #[test]
     fn ld_hl_d16() {
         let mut cpu = CPU::create(
-            Memory::new_from_vecs(vec![0x21, 0x34, 0x12], vec![]));
+            MemoryManager::new_from_vecs(vec![0x21, 0x34, 0x12], vec![]));
         cpu.step();
         assert_eq!(cpu.reg_hl.value, 0x1234);
     }
@@ -130,7 +130,7 @@ mod tests {
     #[test]
     fn ld_sp_d16() {
         let mut cpu = CPU::create(
-            Memory::new_from_vecs(vec![0x31, 0x34, 0x12], vec![]));
+            MemoryManager::new_from_vecs(vec![0x31, 0x34, 0x12], vec![]));
         cpu.step();
         assert_eq!(cpu.stack_pointer.value, 0x1234);
     }
@@ -138,7 +138,7 @@ mod tests {
     #[test]
     fn ld_pointer_hl_a_and_decrement() {
         let mut cpu = CPU::create(
-            Memory::new_from_vecs(vec![0x32], vec![]));
+            MemoryManager::new_from_vecs(vec![0x32], vec![]));
         cpu.reg_a.value = 0xF0;
         cpu.reg_hl.value = 0xC123;
         cpu.step();
@@ -148,7 +148,7 @@ mod tests {
 
     #[test]
     fn bit_7_h_to_one() {
-        let mut cpu = CPU::create(Memory::new_from_vecs(vec![0xCB, 0x7C], vec![]));
+        let mut cpu = CPU::create(MemoryManager::new_from_vecs(vec![0xCB, 0x7C], vec![]));
         cpu.reg_hl.value = 0xF000;
         cpu.step();
         assert!(!cpu.flags.contains(Flags::N));
@@ -158,7 +158,7 @@ mod tests {
 
     #[test]
     fn bit_7_h_to_zero() {
-        let mut cpu = CPU::create(Memory::new_from_vecs(vec![0xCB, 0x7C], vec![]));
+        let mut cpu = CPU::create(MemoryManager::new_from_vecs(vec![0xCB, 0x7C], vec![]));
         cpu.reg_hl.value = 0x0F00;
         cpu.step();
         assert!(!cpu.flags.contains(Flags::N));
