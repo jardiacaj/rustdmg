@@ -106,7 +106,7 @@ impl MemoryManager {
         if address < 0xA000 { return Box::new(&mut self.video_ram); };
         if address < 0xC000 { panic!("External ram not implemented"); };
         if address < 0xD000 { return Box::new(&mut self.work_ram); };
-        panic!("Invalid memory address 0x{:X?}", address);
+        panic!("Invalid memory address {:#02X?}", address);
     }
 }
 

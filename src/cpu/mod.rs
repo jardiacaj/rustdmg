@@ -80,7 +80,7 @@ impl CPU {
             .enumerate()
             .find(|enumerated_instruction| enumerated_instruction.1.opcode == opcode) {
             Some(enumerated_instruction) => return enumerated_instruction.0,
-            None => panic!("Bad opcode 0x{:X?}", opcode),
+            None => panic!("Bad opcode {:#02X?}", opcode),
         }
     }
 
@@ -92,7 +92,7 @@ impl CPU {
             .enumerate()
             .find(|enumerated_instruction| enumerated_instruction.1.opcode == opcode) {
             Some(enumerated_instruction) => return enumerated_instruction.0,
-            None => panic!("Bad opcode 0x{:X?}", opcode),
+            None => panic!("Bad opcode {:#02X?}", opcode),
         }
     }
 

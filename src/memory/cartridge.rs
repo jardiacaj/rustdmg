@@ -160,7 +160,7 @@ impl Cartridge {
             Some(cartridge_type) => return Ok(cartridge_type),
             None => return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                format!("Cartridge type {:X?} unrecognized", type_code_in_rom))),
+                format!("Cartridge type {:#02X?} unrecognized", type_code_in_rom))),
         }
     }
 
@@ -173,7 +173,7 @@ impl Cartridge {
             Some(cartridge_size) => return Ok(cartridge_size),
             None => return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                format!("Cartridge size {:X?} unrecognized", type_size_in_rom))),
+                format!("Cartridge size {:#02X?} unrecognized", type_size_in_rom))),
         }
     }
 }
