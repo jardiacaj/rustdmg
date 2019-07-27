@@ -35,7 +35,7 @@ impl BootROM {
 }
 
 impl MemoryZone for BootROM {
-    fn read(&mut self, address: u16) -> u8 { self.data[address as usize] }
+    fn read(&self, address: u16) -> u8 { self.data[address as usize] }
     fn write(&mut self, address: u16, value: u8) { panic!("Trying to write to boot ROM"); }
 }
 

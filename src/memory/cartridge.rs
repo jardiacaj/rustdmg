@@ -67,7 +67,7 @@ pub struct RomBank {
 }
 
 impl MemoryZone for RomBank {
-    fn read(&mut self, address: u16) -> u8 {
+    fn read(&self, address: u16) -> u8 {
         self.data[self.global_address_to_local_address(address) as usize]
     }
     fn write(&mut self, address: u16, value: u8) {

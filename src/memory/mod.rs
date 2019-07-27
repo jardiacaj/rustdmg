@@ -12,7 +12,7 @@ const VIDEO_RAM_SIZE: u16 = 0x2000;
 const VIDEO_RAM_BASE_ADDRESS: u16 = 0x8000;
 
 pub trait MemoryZone {
-    fn read(&mut self, address: u16) -> u8;
+    fn read(&self, address: u16) -> u8;
     fn write(&mut self, address: u16, value: u8);
 }
 
@@ -22,7 +22,7 @@ pub struct RAMBank {
 }
 
 impl MemoryZone for RAMBank {
-    fn read(&mut self, address: u16) -> u8 {
+    fn read(&self, address: u16) -> u8 {
         self.data[self.global_address_to_local_address(address) as usize]
     }
     fn write(&mut self, address: u16, value: u8) {
@@ -55,16 +55,14 @@ pub struct Memory {
 //            interrupt_enable_register: MemoryZone,
 }
 
-impl MemoryZone for Memory {
-    fn read(&mut self, address: u16) -> u8 {
+impl Memory {
+    pub fn read(&mut self, address: u16) -> u8 {
         self.get_memory_zone_from_address(address).read(address)
     }
-    fn write(&mut self, address: u16, value: u8) {
+    pub fn write(&mut self, address: u16, value: u8) {
         self.get_memory_zone_from_address(address).write(address, value)
     }
-}
 
-impl Memory {
     fn new_video_ram() -> RAMBank {
         RAMBank {
             base_address: VIDEO_RAM_BASE_ADDRESS,
