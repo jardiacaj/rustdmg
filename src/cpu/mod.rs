@@ -63,10 +63,31 @@ impl CPU {
         implementation(self);
     }
 
+    fn run_cb_op(&mut self) {
+        let opcode = self.pop_u8_from_pc();
+        println!("CB OP: {:X?}", opcode);
+
+        let instruction_index = CPU::get_cb_instruction_index_from_opcode(opcode);
+        let implementation = INSTRUCTIONS_CB[instruction_index].implementation;
+        implementation(self);
+    }
+
     /// FIXME this should go away once all instructions are implemented, then opcodes will be
     /// array indexes
     fn get_instruction_index_from_opcode(opcode: u8) -> usize {
         match INSTRUCTIONS_NOCB
+            .iter()
+            .enumerate()
+            .find(|enumerated_instruction| enumerated_instruction.1.opcode == opcode) {
+            Some(enumerated_instruction) => return enumerated_instruction.0,
+            None => panic!("Bad opcode 0x{:X?}", opcode),
+        }
+    }
+
+    /// FIXME this should go away once all instructions are implemented, then opcodes will be
+    /// array indexes
+    fn get_cb_instruction_index_from_opcode(opcode: u8) -> usize {
+        match INSTRUCTIONS_CB
             .iter()
             .enumerate()
             .find(|enumerated_instruction| enumerated_instruction.1.opcode == opcode) {
@@ -90,7 +111,8 @@ mod tests {
 
     #[test]
     fn xor_a() {
-        let mut cpu = CPU::create(Memory::new_from_vecs(vec![0xAF], vec![]));
+        let mut cpu = CPU::create(
+            Memory::new_from_vecs(vec![0xAF], vec![]));
         cpu.reg_a.value = 0x4F;
         cpu.step();
         assert_eq!(cpu.reg_a.value, 0);
@@ -99,25 +121,48 @@ mod tests {
 
     #[test]
     fn ld_hl_d16() {
-        let mut cpu = CPU::create(Memory::new_from_vecs(vec![0x21, 0x34, 0x12], vec![]));
+        let mut cpu = CPU::create(
+            Memory::new_from_vecs(vec![0x21, 0x34, 0x12], vec![]));
         cpu.step();
         assert_eq!(cpu.reg_hl.value, 0x1234);
     }
 
     #[test]
     fn ld_sp_d16() {
-        let mut cpu = CPU::create(Memory::new_from_vecs(vec![0x31, 0x34, 0x12], vec![]));
+        let mut cpu = CPU::create(
+            Memory::new_from_vecs(vec![0x31, 0x34, 0x12], vec![]));
         cpu.step();
         assert_eq!(cpu.stack_pointer.value, 0x1234);
     }
 
     #[test]
     fn ld_pointer_hl_a_and_decrement() {
-        let mut cpu = CPU::create(Memory::new_from_vecs(vec![0x32], vec![]));
+        let mut cpu = CPU::create(
+            Memory::new_from_vecs(vec![0x32], vec![]));
         cpu.reg_a.value = 0xF0;
         cpu.reg_hl.value = 0xC123;
         cpu.step();
         assert_eq!(cpu.memory.read(0xC123), 0xF0);
         assert_eq!(cpu.reg_hl.value, 0xC122);
+    }
+
+    #[test]
+    fn bit_7_h_to_one() {
+        let mut cpu = CPU::create(Memory::new_from_vecs(vec![0xCB, 0x7C], vec![]));
+        cpu.reg_hl.value = 0xF000;
+        cpu.step();
+        assert!(!cpu.flags.contains(Flags::N));
+        assert!(cpu.flags.contains(Flags::H));
+        assert!(!cpu.flags.contains(Flags::Z));
+    }
+
+    #[test]
+    fn bit_7_h_to_zero() {
+        let mut cpu = CPU::create(Memory::new_from_vecs(vec![0xCB, 0x7C], vec![]));
+        cpu.reg_hl.value = 0x0F00;
+        cpu.step();
+        assert!(!cpu.flags.contains(Flags::N));
+        assert!(cpu.flags.contains(Flags::H));
+        assert!(cpu.flags.contains(Flags::Z));
     }
 }

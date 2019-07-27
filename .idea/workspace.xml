@@ -6,10 +6,9 @@
   <component name="ChangeListManager">
     <list default="true" id="77534023-f48c-484c-890f-135cfd6c2296" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.travis.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.travis.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/cpu/instruction.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/cpu/instruction.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/cpu/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/cpu/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/dmg.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dmg.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/memory/bootrom.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/memory/bootrom.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/memory/cartridge.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/memory/cartridge.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/memory/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/memory/mod.rs" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -108,7 +107,8 @@
       <workItem from="1564133828092" duration="12045000" />
       <workItem from="1564153127815" duration="641000" />
       <workItem from="1564168832180" duration="77000" />
-      <workItem from="1564168936358" duration="11242000" />
+      <workItem from="1564168936358" duration="13021000" />
+      <workItem from="1564225384254" duration="2756000" />
     </task>
     <servers />
   </component>
