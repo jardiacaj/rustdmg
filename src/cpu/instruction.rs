@@ -160,7 +160,7 @@ mod tests {
         let mut cpu = CPU::create(MemoryManager::new_from_vecs(vec![0x20, 0x33], vec![]));
         cpu.flags.insert(Flags::Z);
         cpu.step();
-        assert_eq!(cpu.program_counter.value, 0x01);
+        assert_eq!(cpu.program_counter.value, 0x02);
         assert_eq!(cpu.cycle_count, 8);
     }
 
