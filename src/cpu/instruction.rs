@@ -20,7 +20,23 @@ macro_rules! ld_8bit_register_immediate {
     )
 }
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 17] = [
+macro_rules! ld_16bit_register_immediate {
+    ($opcode:literal, $register:ident, $register_name:expr) => (
+        Instruction{
+            opcode: $opcode,
+            mnemonic: concat!("LD ", $register_name, ",d16"),
+            description: concat!("Load immediate to ", $register_name),
+            length_in_bytes: 3, cycles: "12", flags_changed: "",
+            implementation: |cpu| {
+                cpu.cycle_count += 12;
+                let immediate = cpu.pop_u16_from_pc();
+                cpu.$register.write(immediate);
+            }
+        }
+    )
+}
+
+pub const INSTRUCTIONS_NOCB: [Instruction; 18] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -52,6 +68,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 17] = [
         } },
 
     ld_8bit_register_immediate!(0x0E, reg_bc, Subregister::Lower, "C"),
+    ld_16bit_register_immediate!(0x11, reg_de, "DE"),
 
     Instruction{opcode: 0x20, mnemonic: "JR NZ,r8", description: "Jump relative if not zero",
         length_in_bytes: 2, cycles: "8 or 12", flags_changed: "",
@@ -65,14 +82,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 17] = [
             }
         } },
 
-
-    Instruction{opcode: 0x21, mnemonic: "LD HL,d16", description: "Load immediate to HL",
-        length_in_bytes: 3, cycles: "12", flags_changed: "",
-        implementation: |cpu| {
-            cpu.cycle_count += 12;
-            let immediate = cpu.pop_u16_from_pc();
-            cpu.reg_hl.write(immediate);
-        } },
+    ld_16bit_register_immediate!(0x21, reg_hl, "HL"),
 
     Instruction{opcode: 0x31, mnemonic: "LD SP,d16", description: "Load immediate to SP",
         length_in_bytes: 3, cycles: "12", flags_changed: "",
@@ -182,6 +192,14 @@ mod tests {
         assert!(!cpu.reg_af.flags.contains(Flags::Z));
         assert!(!cpu.reg_af.flags.contains(Flags::N));
         assert!(cpu.reg_af.flags.contains(Flags::H));
+    }
+
+    #[test]
+    fn ld_de_d16() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x11, 0x34, 0x12], vec![]));
+        cpu.step();
+        assert_eq!(cpu.reg_de.read(), 0x1234);
     }
 
     #[test]
