@@ -20,7 +20,7 @@ macro_rules! ld_8bit_register_immediate {
     )
 }
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 15] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 16] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -92,6 +92,13 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 15] = [
 
     ld_8bit_register_immediate!(0x3E, reg_af, Subregister::Higher, "A"),
 
+    Instruction{opcode: 0x77, mnemonic: "LD (HL),A", description: "Put A to pointer HL",
+        length_in_bytes: 1, cycles: "8", flags_changed: "",
+        implementation: |cpu| {
+            cpu.cycle_count += 8;
+            cpu.memory.write(cpu.reg_hl.read(), cpu.reg_af.read_a());
+        } },
+
     Instruction{opcode: 0xAF, mnemonic: "XOR A", description: "XOR A with A (zeroes A)",
         length_in_bytes: 1, cycles: "4", flags_changed: "Z000",
         implementation: |cpu| {
@@ -104,7 +111,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 15] = [
         length_in_bytes: 0, cycles: "0", flags_changed: "",
         implementation: |cpu| cpu.run_cb_op() },
 
-    Instruction{opcode: 0xE2, mnemonic: "LD (C), A", description: "Put A to pointer 0xFF00 + C",
+    Instruction{opcode: 0xE2, mnemonic: "LD ($FF00+C), A", description: "Put A to pointer 0xFF00 + C",
         length_in_bytes: 1, cycles: "8", flags_changed: "",
         implementation: |cpu| {
             cpu.cycle_count += 8;
@@ -194,6 +201,16 @@ mod tests {
         cpu.step();
         assert_eq!(cpu.memory.read(0xC123), 0xF0);
         assert_eq!(cpu.reg_hl.read(), 0xC122);
+    }
+
+    #[test]
+    fn ld_pointer_hl_a() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x77], vec![]));
+        cpu.reg_af.write_a(0xF0);
+        cpu.reg_hl.write(0xC123);
+        cpu.step();
+        assert_eq!(cpu.memory.read(0xC123), 0xF0);
     }
 
     #[test]
