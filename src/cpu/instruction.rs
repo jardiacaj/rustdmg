@@ -20,7 +20,7 @@ macro_rules! ld_8bit_register_immediate {
     )
 }
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 13] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 15] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -37,8 +37,21 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 13] = [
         length_in_bytes: 1, cycles: "4", flags_changed: "Z0H",
         implementation: |cpu| panic!("Not implemented") },
 
-    ld_8bit_register_immediate!(0x0E, reg_bc, Subregister::Lower, "C"),
+    Instruction{opcode: 0x0C, mnemonic: "INC C", description: "Increment C",
+        length_in_bytes: 1, cycles: "4", flags_changed: "Z0H-",
+        implementation: |cpu| {
+            cpu.cycle_count += 4;
+            let target_value = cpu.reg_bc.read_subreg(Subregister::Lower).overflowing_add(1).0;
+            cpu.reg_bc.write_subreg(
+                Subregister::Lower,
+                target_value
+            );
+            cpu.reg_af.flags.remove(Flags::N);
+            cpu.reg_af.flags.set(Flags::Z, target_value == 0);
+            cpu.reg_af.flags.set(Flags::H, target_value & 0x0F == 0);
+        } },
 
+    ld_8bit_register_immediate!(0x0E, reg_bc, Subregister::Lower, "C"),
 
     Instruction{opcode: 0x20, mnemonic: "JR NZ,r8", description: "Jump relative if not zero",
         length_in_bytes: 2, cycles: "8 or 12", flags_changed: "",
@@ -91,6 +104,14 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 13] = [
         length_in_bytes: 0, cycles: "0", flags_changed: "",
         implementation: |cpu| cpu.run_cb_op() },
 
+    Instruction{opcode: 0xE2, mnemonic: "LD (C), A", description: "Put A to pointer 0xFF00 + C",
+        length_in_bytes: 1, cycles: "8", flags_changed: "",
+        implementation: |cpu| {
+            cpu.cycle_count += 8;
+            let address = 0xFF00 + (cpu.reg_bc.read_subreg(Subregister::Lower) as u16);
+            cpu.memory.write(address, cpu.reg_af.read_a());
+        } },
+
 ];
 
 pub const INSTRUCTIONS_CB: [Instruction; 1] = [
@@ -124,6 +145,7 @@ mod tests {
     use crate::memory::MemoryZone;
     use crate::cpu::register::DMGRegister;
     use crate::cpu::register::Subregister;
+    use bitflags::_core::num::FpCategory::Subnormal;
 
     #[test]
     fn xor_a() {
@@ -133,6 +155,18 @@ mod tests {
         cpu.step();
         assert_eq!(cpu.reg_af.read_a(), 0);
         assert_eq!(cpu.reg_af.flags, Flags::Z)
+    }
+
+    #[test]
+    fn inc_c() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x0C], vec![]));
+        cpu.reg_bc.write_subreg(Subregister::Lower, 0x4F);
+        cpu.step();
+        assert_eq!(cpu.reg_bc.read_subreg(Subregister::Lower), 0x50);
+        assert!(!cpu.reg_af.flags.contains(Flags::Z));
+        assert!(!cpu.reg_af.flags.contains(Flags::N));
+        assert!(cpu.reg_af.flags.contains(Flags::H));
     }
 
     #[test]
@@ -160,6 +194,17 @@ mod tests {
         cpu.step();
         assert_eq!(cpu.memory.read(0xC123), 0xF0);
         assert_eq!(cpu.reg_hl.read(), 0xC122);
+    }
+
+    #[test]
+    fn ld_pointer_c_a() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0xE2], vec![]));
+        cpu.reg_af.write_a(0xF0);
+        cpu.reg_bc.write_subreg(Subregister::Lower, 0x0F);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 8);
+        assert_eq!(cpu.memory.read(0xFF0F), 0xF0);
     }
 
     #[test]
