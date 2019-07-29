@@ -45,21 +45,38 @@ impl CPU {
         result
     }
 
+    fn print_instruction(&mut self, instruction: &Instruction) {
+        print!("  {}", instruction.mnemonic);
+        if instruction.length_in_bytes > 1 {
+            print!(" -- {:02X}", self.memory.read(self.program_counter.read() + 1));
+        }
+        if instruction.length_in_bytes > 2 {
+            print!("{:02X}", self.memory.read(self.program_counter.read() + 2));
+        }
+        println!();
+    }
+
     fn run_op(&mut self) {
         let opcode = self.pop_u8_from_pc();
-        println!("OP: {:02X}", opcode);
+        print!("OP: {:02X}", opcode);
 
         let instruction_index = CPU::get_instruction_index_from_opcode(opcode);
-        let implementation = INSTRUCTIONS_NOCB[instruction_index].implementation;
+        let instruction = &INSTRUCTIONS_NOCB[instruction_index];
+        let implementation = instruction.implementation;
+
+        self.print_instruction(instruction);
         implementation(self);
     }
 
     fn run_cb_op(&mut self) {
         let opcode = self.pop_u8_from_pc();
-        println!("CB OP: {:02X}", opcode);
+        print!("CB OP: {:02X}", opcode);
 
         let instruction_index = CPU::get_cb_instruction_index_from_opcode(opcode);
-        let implementation = INSTRUCTIONS_CB[instruction_index].implementation;
+        let instruction = &INSTRUCTIONS_CB[instruction_index];
+        let implementation = instruction.implementation;
+
+        self.print_instruction(instruction);
         implementation(self);
     }
 
@@ -88,6 +105,7 @@ impl CPU {
     }
 
     pub fn step(&mut self) {
+        println!();
         println!("PC: {:02X}", self.program_counter.read());
         self.run_op()
     }

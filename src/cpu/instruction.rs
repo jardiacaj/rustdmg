@@ -4,7 +4,23 @@ use crate::memory::MemoryZone;
 use crate::cpu::register::DMGRegister;
 use crate::cpu::register::Subregister;
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 12] = [
+macro_rules! ld_8bit_register_immediate {
+    ($opcode:literal, $register:ident, $subregister:expr, $register_name:expr) => (
+        Instruction{
+            opcode: $opcode,
+            mnemonic: concat!("LD ", $register_name, ",d8"),
+            description: concat!("Load immediate to {}", $register_name),
+            length_in_bytes: 2, cycles: "8", flags_changed: "",
+            implementation: |cpu| {
+                let immediate = cpu.pop_u8_from_pc();
+                cpu.$register.write_subreg($subregister, immediate);
+                cpu.cycle_count += 8;
+            }
+        }
+    )
+}
+
+pub const INSTRUCTIONS_NOCB: [Instruction; 13] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -21,14 +37,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 12] = [
         length_in_bytes: 1, cycles: "4", flags_changed: "Z0H",
         implementation: |cpu| panic!("Not implemented") },
 
-
-    Instruction{opcode: 0x0E, mnemonic: "LD C,d8", description: "Load immediate to C",
-        length_in_bytes: 2, cycles: "8", flags_changed: "",
-        implementation: |cpu| {
-            let immediate = cpu.pop_u8_from_pc();
-            cpu.reg_bc.write_subreg(Subregister::Lower, immediate);
-            cpu.cycle_count += 8;
-        } },
+    ld_8bit_register_immediate!(0x0E, reg_bc, Subregister::Lower, "C"),
 
 
     Instruction{opcode: 0x20, mnemonic: "JR NZ,r8", description: "Jump relative if not zero",
@@ -67,6 +76,8 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 12] = [
             cpu.memory.write(cpu.reg_hl.read(), cpu.reg_af.read_a());
             cpu.reg_hl.overflowing_add(0xFFFF);
         } },
+
+    ld_8bit_register_immediate!(0x3E, reg_af, Subregister::Higher, "A"),
 
     Instruction{opcode: 0xAF, mnemonic: "XOR A", description: "XOR A with A (zeroes A)",
         length_in_bytes: 1, cycles: "4", flags_changed: "Z000",
