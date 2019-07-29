@@ -45,13 +45,19 @@ impl CPU {
         result
     }
 
-    fn print_instruction(&mut self, instruction: &Instruction) {
+    // FIXME makes assumptions on PC
+    fn print_instruction(&mut self, instruction: &Instruction, is_cb: bool) {
+        let neg_offset: u16 = match is_cb {
+            true => 1,
+            false => 0,
+        };
+
         print!("  {}", instruction.mnemonic);
         if instruction.length_in_bytes > 1 {
-            print!(" -- {:02X}", self.memory.read(self.program_counter.read() + 1));
+            print!(" -- {:02X}", self.memory.read(self.program_counter.read() - neg_offset));
         }
         if instruction.length_in_bytes > 2 {
-            print!("{:02X}", self.memory.read(self.program_counter.read() + 2));
+            print!("{:02X}", self.memory.read(self.program_counter.read() - neg_offset + 1));
         }
         println!();
     }
@@ -64,7 +70,7 @@ impl CPU {
         let instruction = &INSTRUCTIONS_NOCB[instruction_index];
         let implementation = instruction.implementation;
 
-        self.print_instruction(instruction);
+        self.print_instruction(instruction, false);
         implementation(self);
     }
 
@@ -76,7 +82,7 @@ impl CPU {
         let instruction = &INSTRUCTIONS_CB[instruction_index];
         let implementation = instruction.implementation;
 
-        self.print_instruction(instruction);
+        self.print_instruction(instruction, true);
         implementation(self);
     }
 

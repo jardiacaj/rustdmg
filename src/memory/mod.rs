@@ -114,8 +114,7 @@ impl MemoryManager {
     }
 
     pub fn new_from_vecs(boot_rom_data: Vec<u8>, cart_rom_bank_zero_data: Vec<u8>) -> MemoryManager {
-        let size = boot_rom_data.len() as u16;
-        let boot_rom = BootROM{data: boot_rom_data, offset: 0, size};
+        let boot_rom = BootROM{data: boot_rom_data};
         MemoryManager {
             boot_rom_active: true,
             boot_rom,
@@ -127,7 +126,7 @@ impl MemoryManager {
     }
 
     fn get_memory_zone_from_address(&mut self, address: u16) -> Box<&mut MemoryZone> {
-        if self.boot_rom_active && address < self.boot_rom.size { return Box::new(&mut self.boot_rom) };
+        if self.boot_rom_active && address < BOOT_ROM_SIZE as u16 { return Box::new(&mut self.boot_rom) };
         if address < ROM_BANK_SIZE as u16 { return Box::new(&mut self.cartridge.rom_banks[0])};
         if address < (ROM_BANK_SIZE * 2) as u16 { panic!("Rom banking not implemented"); };
         if address < 0xA000 { return Box::new(&mut self.video_ram); };

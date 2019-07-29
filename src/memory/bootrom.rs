@@ -6,11 +6,7 @@ use std::io::Read;
 
 pub const BOOT_ROM_SIZE: usize = 256;
 
-pub struct BootROM {
-    pub offset: u16,
-    pub size: u16,
-    pub data: Vec<u8>,
-}
+pub struct BootROM { pub data: Vec<u8> }
 
 impl BootROM {
     pub fn new(boot_rom_file_path: &str) -> io::Result<BootROM> {
@@ -24,13 +20,7 @@ impl BootROM {
         let mut data: Vec<u8> = Vec::new();
         file.read_to_end(&mut data)?;
 
-        Ok(
-            BootROM{
-                data,
-                offset: 0,
-                size: BOOT_ROM_SIZE as u16,
-            }
-        )
+        Ok(BootROM{data})
     }
 }
 
@@ -46,13 +36,13 @@ mod tests {
     #[test]
     #[should_panic(expected = "Trying to write to boot ROM")]
     fn write_panics() {
-        let mut bootrom = BootROM{data:vec![0], offset:0, size: BOOT_ROM_SIZE as u16};
+        let mut bootrom = BootROM{data:vec![0]};
         bootrom.write(0, 0);
     }
 
     #[test]
     fn read() {
-        let mut bootrom = BootROM{data:vec![123, 234], offset:0, size: BOOT_ROM_SIZE as u16};
+        let mut bootrom = BootROM{data:vec![123, 234]};
         assert_eq!(bootrom.read(1), 234);
     }
 }
