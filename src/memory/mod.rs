@@ -10,6 +10,8 @@ const WORK_RAM_BANK_SIZE: u16 = 0x1000;
 const WORK_RAM_BASE_ADDRESS: u16 = 0xC000;
 const VIDEO_RAM_SIZE: u16 = 0x2000;
 const VIDEO_RAM_BASE_ADDRESS: u16 = 0x8000;
+const IO_PORTS_SIZE: u16 = 0x80;
+const IO_PORTS_BASE_ADDRESS: u16 = 0xFF00;
 
 pub trait MemoryZone {
     fn read(&self, address: u16) -> u8;
@@ -35,12 +37,33 @@ impl RAMBank {
     fn global_address_to_local_address(&self, address: u16) -> u16 { address - self.base_address }
 }
 
+pub struct IOPorts {
+    pub data: Vec<u8>
+}
+
+impl MemoryZone for IOPorts {
+    fn read(&self, address: u16) -> u8 {
+        println!("Reading from IO");
+        self.data[self.global_address_to_local_address(address) as usize]
+    }
+    fn write(&mut self, address: u16, value: u8) {
+        println!("Writing to IO");
+        let local_address = self.global_address_to_local_address(address) as usize;
+        self.data[local_address] = value;
+    }
+}
+
+impl IOPorts {
+    fn global_address_to_local_address(&self, address: u16) -> u16 { address - IO_PORTS_BASE_ADDRESS }
+}
+
 pub struct MemoryManager {
     pub boot_rom_active: bool,
     pub boot_rom: BootROM,
     pub cartridge: cartridge::Cartridge,
     pub work_ram: RAMBank,
     pub video_ram: RAMBank,
+    pub io_ports: IOPorts,
 //            rom_bank_fixed: MemoryZone,
 //            rom_bank_switchable: MemoryZone,
 //            vram: MemoryZone,
@@ -77,6 +100,8 @@ impl MemoryManager {
         }
     }
 
+    fn new_io_ports() -> IOPorts { IOPorts{data: vec![0; IO_PORTS_SIZE as usize]} }
+
     pub fn new(boot_rom: BootROM, cartridge: Cartridge) -> MemoryManager {
         MemoryManager {
             boot_rom_active: true,
@@ -84,6 +109,7 @@ impl MemoryManager {
             cartridge,
             work_ram: MemoryManager::new_work_ram(),
             video_ram: MemoryManager::new_video_ram(),
+            io_ports: MemoryManager::new_io_ports(),
         }
     }
 
@@ -96,6 +122,7 @@ impl MemoryManager {
             cartridge: Cartridge::new_dummy_cartridge(),
             work_ram: MemoryManager::new_work_ram(),
             video_ram: MemoryManager::new_video_ram(),
+            io_ports: MemoryManager::new_io_ports(),
         }
     }
 
@@ -106,6 +133,9 @@ impl MemoryManager {
         if address < 0xA000 { return Box::new(&mut self.video_ram); };
         if address < 0xC000 { panic!("External ram not implemented"); };
         if address < 0xD000 { return Box::new(&mut self.work_ram); };
+        if address >= IO_PORTS_BASE_ADDRESS && address < IO_PORTS_BASE_ADDRESS + IO_PORTS_SIZE {
+            return Box::new(&mut self.io_ports);
+        }
         panic!("Invalid memory address {:#02X?}", address);
     }
 }
