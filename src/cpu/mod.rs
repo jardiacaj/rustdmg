@@ -5,47 +5,36 @@ use super::memory::MemoryManager;
 use super::memory::MemoryZone;
 use register::*;
 use instruction::*;
-use bitflags::bitflags;
 
-bitflags! {
-    pub struct Flags: u8 {
-        const Z = 0b10000000;
-        const N = 0b01000000;
-        const H = 0b00100000;
-        const C = 0b00010000;
-    }
-}
 
 pub struct CPU {
-    flags: Flags,
-    reg_a: Register8bit,
-    reg_bc: Register16bit,
-    reg_de: Register16bit,
-    reg_hl: Register16bit,
-    stack_pointer: Register16bit,
-    program_counter: Register16bit,
-    memory: MemoryManager,
-    cycle_count: u64,
+    pub reg_af: AFRegister,
+    pub reg_bc: Register16bit,
+    pub reg_de: Register16bit,
+    pub reg_hl: Register16bit,
+    pub stack_pointer: Register16bit,
+    pub program_counter: Register16bit,
+    pub memory: MemoryManager,
+    pub cycle_count: u64,
 }
 
 impl CPU {
-    pub fn create(memory: MemoryManager) -> CPU {
+    pub fn new(memory: MemoryManager) -> CPU {
         CPU {
-            flags: Flags{bits: 0},
-            reg_a: Register8bit{value: 0},
-            reg_bc: Register16bit{value: 0},
-            reg_de: Register16bit{value: 0},
-            reg_hl: Register16bit{value: 0},
-            stack_pointer: Register16bit{value: 0},
-            program_counter: Register16bit{value: 0},
+            reg_af: AFRegister::new(),
+            reg_bc: Register16bit::new(),
+            reg_de: Register16bit::new(),
+            reg_hl: Register16bit::new(),
+            stack_pointer: Register16bit::new(),
+            program_counter: Register16bit::new(),
             memory,
             cycle_count: 0,
         }
     }
 
     fn pop_u8_from_pc(&mut self) -> u8 {
-        let result = self.memory.read(self.program_counter.value);
-        self.program_counter.value += 1;
+        let result = self.memory.read(self.program_counter.read());
+        self.program_counter.inc();
         result
     }
 
@@ -99,7 +88,7 @@ impl CPU {
     }
 
     pub fn step(&mut self) {
-        println!("PC: {:02X}", self.program_counter.value);
+        println!("PC: {:02X}", self.program_counter.read());
         self.run_op()
     }
 }
