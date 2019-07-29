@@ -20,7 +20,7 @@ macro_rules! ld_8bit_register_immediate {
     )
 }
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 16] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 17] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -110,6 +110,14 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 16] = [
     Instruction{opcode: 0xCB, mnemonic: "CB", description: "CB prefix",
         length_in_bytes: 0, cycles: "0", flags_changed: "",
         implementation: |cpu| cpu.run_cb_op() },
+
+    Instruction{opcode: 0xE0, mnemonic: "LD ($FF00+imm), A", description: "Put A to pointer 0xFF00 + immediate",
+        length_in_bytes: 2, cycles: "12", flags_changed: "",
+        implementation: |cpu| {
+            cpu.cycle_count += 12;
+            let address = 0xFF00 + (cpu.pop_u8_from_pc() as u16);
+            cpu.memory.write(address, cpu.reg_af.read_a());
+        } },
 
     Instruction{opcode: 0xE2, mnemonic: "LD ($FF00+C), A", description: "Put A to pointer 0xFF00 + C",
         length_in_bytes: 1, cycles: "8", flags_changed: "",
@@ -211,6 +219,16 @@ mod tests {
         cpu.reg_hl.write(0xC123);
         cpu.step();
         assert_eq!(cpu.memory.read(0xC123), 0xF0);
+    }
+
+    #[test]
+    fn ld_high_immediate_a() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0xE0, 0x45], vec![]));
+        cpu.reg_af.write_a(0xF0);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 12);
+        assert_eq!(cpu.memory.read(0xFF45), 0xF0);
     }
 
     #[test]
