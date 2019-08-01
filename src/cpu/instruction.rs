@@ -36,6 +36,21 @@ macro_rules! ld_16bit_register_immediate {
     )
 }
 
+macro_rules! ld_register_pointer {
+    ($opcode: literal, $register:ident, $write_method:ident, $register_name:expr, $pointer:ident, $pointer_name:expr) => (
+        Instruction{opcode: $opcode,
+            mnemonic: concat!("LD ", $register_name, " (", $pointer_name, ")"),
+            description: concat!("Put pointer ", $pointer_name, " in ", $register_name),
+            length_in_bytes: 1, cycles: "8", flags_changed: "",
+            implementation: |cpu| {
+                cpu.cycle_count += 8;
+                cpu.$register.$write_method(cpu.memory.read(cpu.$pointer.read()));
+            }
+        }
+    )
+}
+
+
 pub const INSTRUCTIONS_NOCB: [Instruction; 19] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
@@ -67,12 +82,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 19] = [
     ld_8bit_register_immediate!(0x0E, reg_bc, write_lower, "C"),
     ld_16bit_register_immediate!(0x11, reg_de, "DE"),
 
-    Instruction{opcode: 0x1A, mnemonic: "LD A, (DE)", description: "Put pointer DE in A",
-        length_in_bytes: 1, cycles: "8", flags_changed: "",
-        implementation: |cpu| {
-            cpu.cycle_count += 8;
-            cpu.reg_af.write_a(cpu.memory.read(cpu.reg_de.read()));
-        } },
+    ld_register_pointer!(0x1A, reg_af, write_a, "A", reg_de, "DE"),
 
     Instruction{opcode: 0x20, mnemonic: "JR NZ,r8", description: "Jump relative if not zero",
         length_in_bytes: 2, cycles: "8 or 12", flags_changed: "",
