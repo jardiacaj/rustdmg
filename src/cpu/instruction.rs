@@ -36,7 +36,7 @@ macro_rules! ld_16bit_register_immediate {
     )
 }
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 18] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 19] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -66,6 +66,13 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 18] = [
 
     ld_8bit_register_immediate!(0x0E, reg_bc, write_lower, "C"),
     ld_16bit_register_immediate!(0x11, reg_de, "DE"),
+
+    Instruction{opcode: 0x1A, mnemonic: "LD A, (DE)", description: "Put pointer DE in A",
+        length_in_bytes: 1, cycles: "8", flags_changed: "",
+        implementation: |cpu| {
+            cpu.cycle_count += 8;
+            cpu.reg_af.write_a(cpu.memory.read(cpu.reg_de.read()));
+        } },
 
     Instruction{opcode: 0x20, mnemonic: "JR NZ,r8", description: "Jump relative if not zero",
         length_in_bytes: 2, cycles: "8 or 12", flags_changed: "",
@@ -234,6 +241,15 @@ mod tests {
         cpu.reg_hl.write(0xC123);
         cpu.step();
         assert_eq!(cpu.memory.read(0xC123), 0xF0);
+    }
+
+    #[test]
+    fn ld_a_pointer_de() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x1A, 0x55], vec![]));
+        cpu.reg_de.write(0x0001);
+        cpu.step();
+        assert_eq!(cpu.reg_af.read_a(), 0x55);
     }
 
     #[test]
