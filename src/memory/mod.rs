@@ -6,6 +6,8 @@ use cartridge::ROM_BANK_SIZE;
 use bootrom::BootROM;
 use crate::memory::bootrom::BOOT_ROM_SIZE;
 
+const HIGH_RAM_BANK_SIZE: u16 = 0x007F;
+const HIGH_RAM_BASE_ADDRESS: u16 = 0xFF80;
 const WORK_RAM_BANK_SIZE: u16 = 0x1000;
 const WORK_RAM_BASE_ADDRESS: u16 = 0xC000;
 const VIDEO_RAM_SIZE: u16 = 0x2000;
@@ -64,6 +66,7 @@ pub struct MemoryManager {
     pub work_ram: RAMBank,
     pub video_ram: RAMBank,
     pub io_ports: IOPorts,
+    pub high_ram: RAMBank,
 //            rom_bank_fixed: MemoryZone,
 //            rom_bank_switchable: MemoryZone,
 //            vram: MemoryZone,
@@ -100,6 +103,13 @@ impl MemoryManager {
         }
     }
 
+    fn new_high_ram() -> RAMBank {
+        RAMBank {
+            base_address: HIGH_RAM_BASE_ADDRESS,
+            data: vec![0; HIGH_RAM_BANK_SIZE as usize]
+        }
+    }
+
     fn new_io_ports() -> IOPorts { IOPorts{data: vec![0; IO_PORTS_SIZE as usize]} }
 
     pub fn new(boot_rom: BootROM, cartridge: Cartridge) -> MemoryManager {
@@ -110,6 +120,7 @@ impl MemoryManager {
             work_ram: MemoryManager::new_work_ram(),
             video_ram: MemoryManager::new_video_ram(),
             io_ports: MemoryManager::new_io_ports(),
+            high_ram: MemoryManager::new_high_ram(),
         }
     }
 
@@ -122,6 +133,7 @@ impl MemoryManager {
             work_ram: MemoryManager::new_work_ram(),
             video_ram: MemoryManager::new_video_ram(),
             io_ports: MemoryManager::new_io_ports(),
+            high_ram: MemoryManager::new_high_ram(),
         }
     }
 
@@ -134,6 +146,9 @@ impl MemoryManager {
         if address < 0xD000 { return Box::new(&mut self.work_ram); };
         if address >= IO_PORTS_BASE_ADDRESS && address < IO_PORTS_BASE_ADDRESS + IO_PORTS_SIZE {
             return Box::new(&mut self.io_ports);
+        }
+        if address >= HIGH_RAM_BASE_ADDRESS && address < HIGH_RAM_BASE_ADDRESS + HIGH_RAM_BANK_SIZE {
+            return Box::new(&mut self.high_ram);
         }
         panic!("Invalid memory address {:#02X?}", address);
     }
