@@ -51,7 +51,7 @@ macro_rules! ld_register_pointer {
 }
 
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 19] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 20] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -78,6 +78,8 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 19] = [
             cpu.reg_af.flags.set(Flags::Z, target_value == 0);
             cpu.reg_af.flags.set(Flags::H, target_value & 0x0F == 0);
         } },
+
+    ld_register_pointer!(0x0A, reg_af, write_a, "A", reg_bc, "BC"),
 
     ld_8bit_register_immediate!(0x0E, reg_bc, write_lower, "C"),
     ld_16bit_register_immediate!(0x11, reg_de, "DE"),
@@ -258,6 +260,15 @@ mod tests {
         let mut cpu = CPU::new(
             MemoryManager::new_from_vecs(vec![0x1A, 0x55], vec![]));
         cpu.reg_de.write(0x0001);
+        cpu.step();
+        assert_eq!(cpu.reg_af.read_a(), 0x55);
+    }
+
+    #[test]
+    fn ld_a_pointer_bc() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x0A, 0x55], vec![]));
+        cpu.reg_bc.write(0x0001);
         cpu.step();
         assert_eq!(cpu.reg_af.read_a(), 0x55);
     }
