@@ -45,6 +45,26 @@ impl CPU {
         result
     }
 
+    fn push_u8_to_stack(&mut self, value: u8) {
+        self.stack_pointer.overflowing_add(0xFFFF);
+        self.memory.write(self.stack_pointer.read(), value);
+    }
+
+    fn push_u16_to_stack(&mut self, value: u16) {
+        self.push_u8_to_stack(value as u8);
+        self.push_u8_to_stack((value << 8) as u8);
+    }
+
+    fn pop_u8_from_stack(&mut self) -> u8 {
+        let result = self.memory.read(self.stack_pointer.read());
+        self.stack_pointer.overflowing_add(1);
+        result
+    }
+
+    fn pop_u16_from_stack(&mut self) -> u16 {
+        ((self.pop_u8_from_stack() as u16) << 8) | (self.pop_u8_from_stack() as u16)
+    }
+
     // FIXME makes assumptions on PC
     fn print_instruction(&mut self, instruction: &Instruction, is_cb: bool) {
         let neg_offset: u16 = match is_cb {

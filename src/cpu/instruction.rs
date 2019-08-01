@@ -68,7 +68,7 @@ macro_rules! ld_register_pointer {
 }
 
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 28] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 29] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -169,6 +169,15 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 28] = [
     Instruction{opcode: 0xCB, mnemonic: "CB", description: "CB prefix",
         length_in_bytes: 0, cycles: "0", flags_changed: "",
         implementation: |cpu| cpu.run_cb_op() },
+
+    Instruction{opcode: 0xCD, mnemonic: "CALL", description: "Call",
+        length_in_bytes: 3, cycles: "24", flags_changed: "",
+        implementation: |cpu| {
+            cpu.cycle_count += 24;
+            let new_pc = cpu.pop_u16_from_pc();
+            cpu.push_u16_to_stack(cpu.program_counter.read());
+            cpu.program_counter.write(new_pc);
+        } },
 
     Instruction{opcode: 0xE0, mnemonic: "LD ($FF00+imm), A", description: "Put A to pointer 0xFF00 + immediate",
         length_in_bytes: 2, cycles: "12", flags_changed: "",
@@ -455,5 +464,17 @@ mod tests {
         cpu.step();
         assert_eq!(cpu.program_counter.read(), 2);
         assert_eq!(cpu.reg_bc.read_lower(), 0xAA);
+    }
+
+    #[test]
+    fn call() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xCD, 0x34, 0x12], vec![]));
+        cpu.stack_pointer.write(0xD000);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 24);
+        assert_eq!(cpu.program_counter.read(), 0x1234);
+        assert_eq!(cpu.stack_pointer.read(), 0xCFFE);
+        assert_eq!(cpu.memory.read(0xCFFF), 0x03);
+        assert_eq!(cpu.memory.read(0xCFFE), 0x00);
     }
 }
