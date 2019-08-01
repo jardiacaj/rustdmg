@@ -68,7 +68,7 @@ macro_rules! ld_register_pointer {
 }
 
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 22] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 28] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -153,6 +153,18 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 22] = [
             cpu.reg_af.write_a(0);
             cpu.reg_af.flags.insert(Flags::Z);
         } },
+
+    ld_register_pointer!(0x46, reg_bc, write_higher, "B", reg_hl, "HL"),
+
+    ld_register_pointer!(0x4E, reg_bc, write_lower, "C", reg_hl, "HL"),
+
+    ld_register_pointer!(0x56, reg_de, write_higher, "D", reg_hl, "HL"),
+
+    ld_register_pointer!(0x5E, reg_de, write_lower, "E", reg_hl, "HL"),
+
+    ld_register_pointer!(0x66, reg_hl, write_higher, "H", reg_hl, "HL"),
+
+    ld_register_pointer!(0x6E, reg_hl, write_lower, "L", reg_hl, "HL"),
 
     Instruction{opcode: 0xCB, mnemonic: "CB", description: "CB prefix",
         length_in_bytes: 0, cycles: "0", flags_changed: "",
@@ -312,6 +324,60 @@ mod tests {
         cpu.step();
         assert_eq!(cpu.reg_af.read_a(), 0x55);
         assert_eq!(cpu.reg_hl.read(), 0x0000);
+    }
+
+    #[test]
+    fn ld_b_pointer_hl() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x46, 0x55], vec![]));
+        cpu.reg_hl.write(0x0001);
+        cpu.step();
+        assert_eq!(cpu.reg_bc.read_higher(), 0x55);
+    }
+
+    #[test]
+    fn ld_c_pointer_hl() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x4E, 0x55], vec![]));
+        cpu.reg_hl.write(0x0001);
+        cpu.step();
+        assert_eq!(cpu.reg_bc.read_lower(), 0x55);
+    }
+
+    #[test]
+    fn ld_d_pointer_hl() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x56, 0x55], vec![]));
+        cpu.reg_hl.write(0x0001);
+        cpu.step();
+        assert_eq!(cpu.reg_de.read_higher(), 0x55);
+    }
+
+    #[test]
+    fn ld_e_pointer_hl() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x5E, 0x55], vec![]));
+        cpu.reg_hl.write(0x0001);
+        cpu.step();
+        assert_eq!(cpu.reg_de.read_lower(), 0x55);
+    }
+
+    #[test]
+    fn ld_h_pointer_hl() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x66, 0x55], vec![]));
+        cpu.reg_hl.write(0x0001);
+        cpu.step();
+        assert_eq!(cpu.reg_hl.read_higher(), 0x55);
+    }
+
+    #[test]
+    fn ld_l_pointer_hl() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x6E, 0x55], vec![]));
+        cpu.reg_hl.write(0x0001);
+        cpu.step();
+        assert_eq!(cpu.reg_hl.read_lower(), 0x55);
     }
 
     #[test]
