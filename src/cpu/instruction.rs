@@ -5,7 +5,7 @@ use crate::cpu::register::DMGRegister;
 use crate::cpu::register::Subregister;
 
 macro_rules! ld_8bit_register_immediate {
-    ($opcode:literal, $register:ident, $subregister:expr, $register_name:expr) => (
+    ($opcode:literal, $register:ident, $write_method:ident, $register_name:expr) => (
         Instruction{
             opcode: $opcode,
             mnemonic: concat!("LD ", $register_name, ",d8"),
@@ -13,7 +13,7 @@ macro_rules! ld_8bit_register_immediate {
             length_in_bytes: 2, cycles: "8", flags_changed: "",
             implementation: |cpu| {
                 let immediate = cpu.pop_u8_from_pc();
-                cpu.$register.write_subreg($subregister, immediate);
+                cpu.$register.$write_method(immediate);
                 cpu.cycle_count += 8;
             }
         }
@@ -57,17 +57,14 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 18] = [
         length_in_bytes: 1, cycles: "4", flags_changed: "Z0H-",
         implementation: |cpu| {
             cpu.cycle_count += 4;
-            let target_value = cpu.reg_bc.read_subreg(Subregister::Lower).overflowing_add(1).0;
-            cpu.reg_bc.write_subreg(
-                Subregister::Lower,
-                target_value
-            );
+            let target_value = cpu.reg_bc.read_lower().overflowing_add(1).0;
+            cpu.reg_bc.write_lower(target_value);
             cpu.reg_af.flags.remove(Flags::N);
             cpu.reg_af.flags.set(Flags::Z, target_value == 0);
             cpu.reg_af.flags.set(Flags::H, target_value & 0x0F == 0);
         } },
 
-    ld_8bit_register_immediate!(0x0E, reg_bc, Subregister::Lower, "C"),
+    ld_8bit_register_immediate!(0x0E, reg_bc, write_lower, "C"),
     ld_16bit_register_immediate!(0x11, reg_de, "DE"),
 
     Instruction{opcode: 0x20, mnemonic: "JR NZ,r8", description: "Jump relative if not zero",
@@ -100,7 +97,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 18] = [
             cpu.reg_hl.overflowing_add(0xFFFF);
         } },
 
-    ld_8bit_register_immediate!(0x3E, reg_af, Subregister::Higher, "A"),
+    ld_8bit_register_immediate!(0x3E, reg_af, write_higher, "A"),
 
     Instruction{opcode: 0x77, mnemonic: "LD (HL),A", description: "Put A to pointer HL",
         length_in_bytes: 1, cycles: "8", flags_changed: "",
@@ -133,7 +130,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 18] = [
         length_in_bytes: 1, cycles: "8", flags_changed: "",
         implementation: |cpu| {
             cpu.cycle_count += 8;
-            let address = 0xFF00 + (cpu.reg_bc.read_subreg(Subregister::Lower) as u16);
+            let address = 0xFF00 + (cpu.reg_bc.read_lower() as u16);
             cpu.memory.write(address, cpu.reg_af.read_a());
         } },
 
@@ -147,7 +144,7 @@ pub const INSTRUCTIONS_CB: [Instruction; 1] = [
             cpu.cycle_count += 8;
             cpu.reg_af.flags.remove(Flags::N);
             cpu.reg_af.flags.insert(Flags::H);
-            cpu.reg_af.flags.set(Flags::Z, (cpu.reg_hl.read_subreg(Subregister::Higher) & (1 << 7)) == 0)
+            cpu.reg_af.flags.set(Flags::Z, (cpu.reg_hl.read_higher() & (1 << 7)) == 0)
         } },
 
 ];
@@ -186,9 +183,9 @@ mod tests {
     fn inc_c() {
         let mut cpu = CPU::new(
             MemoryManager::new_from_vecs(vec![0x0C], vec![]));
-        cpu.reg_bc.write_subreg(Subregister::Lower, 0x4F);
+        cpu.reg_bc.write_lower(0x4F);
         cpu.step();
-        assert_eq!(cpu.reg_bc.read_subreg(Subregister::Lower), 0x50);
+        assert_eq!(cpu.reg_bc.read_lower(), 0x50);
         assert!(!cpu.reg_af.flags.contains(Flags::Z));
         assert!(!cpu.reg_af.flags.contains(Flags::N));
         assert!(cpu.reg_af.flags.contains(Flags::H));
@@ -254,7 +251,7 @@ mod tests {
         let mut cpu = CPU::new(
             MemoryManager::new_from_vecs(vec![0xE2], vec![]));
         cpu.reg_af.write_a(0xF0);
-        cpu.reg_bc.write_subreg(Subregister::Lower, 0x0F);
+        cpu.reg_bc.write_lower(0x0F);
         cpu.step();
         assert_eq!(cpu.cycle_count, 8);
         assert_eq!(cpu.memory.read(0xFF0F), 0xF0);
@@ -313,6 +310,6 @@ mod tests {
         let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x0E, 0xAA], vec![]));
         cpu.step();
         assert_eq!(cpu.program_counter.read(), 2);
-        assert_eq!(cpu.reg_bc.read_subreg(Subregister::Lower), 0xAA);
+        assert_eq!(cpu.reg_bc.read_lower(), 0xAA);
     }
 }

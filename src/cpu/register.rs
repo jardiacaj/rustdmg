@@ -7,6 +7,10 @@ pub trait DMGRegister {
     fn write(&mut self, value: u16);
     fn inc(&mut self);
     fn overflowing_add(&mut self, value: u16);
+    fn read_lower(&self) -> u8;
+    fn write_lower(&mut self, value: u8);
+    fn read_higher(&self) -> u8;
+    fn write_higher(&mut self, value: u8);
     fn read_subreg(&self, subregister: Subregister) -> u8;
     fn write_subreg(&mut self, subregister: Subregister, value: u8);
 }
@@ -22,16 +26,22 @@ impl DMGRegister for Register16bit {
     fn write(&mut self, value: u16) { self.value = value }
     fn inc(&mut self) { self.value += 1 }
     fn overflowing_add(&mut self, value: u16) { self.value = self.value.overflowing_add(value).0 }
+    fn read_lower(&self) -> u8 { self.value as u8 }
+    fn write_lower(&mut self, value: u8) { self.value = (self.value & 0xFF00) + (value as u16) }
+    fn read_higher(&self) -> u8 { (self.value >> 8) as u8 }
+    fn write_higher(&mut self, value: u8) {
+        self.value = (self.value & 0x00FF) + ((value as u16) << 8);
+    }
     fn read_subreg(&self, subregister: Subregister) -> u8 {
         match subregister {
-            Subregister::Higher => (self.value >> 8) as u8,
-            Subregister::Lower => self.value as u8,
+            Subregister::Higher => self.read_higher(),
+            Subregister::Lower => self.read_lower(),
         }
     }
     fn write_subreg(&mut self, subregister: Subregister, value: u8) {
         match subregister {
-            Subregister::Higher => self.value = (self.value & 0x00FF) + ((value as u16) << 8),
-            Subregister::Lower => self.value = (self.value & 0xFF00) + (value as u16)
+            Subregister::Higher => self.write_higher(value),
+            Subregister::Lower => self.write_lower(value)
         }
     }
 }
@@ -52,8 +62,8 @@ pub struct AFRegister {
 
 impl AFRegister {
     pub fn new() -> AFRegister { AFRegister{a: 0, flags: Flags{bits:0} } }
-    pub fn read_a(&self) -> u8 { self.read_subreg(Subregister::Higher) }
-    pub fn write_a(&mut self, value: u8) { self.write_subreg(Subregister::Higher, value) }
+    pub fn read_a(&self) -> u8 { self.read_higher() }
+    pub fn write_a(&mut self, value: u8) { self.write_higher(value) }
 }
 
 impl DMGRegister for AFRegister {
@@ -64,16 +74,20 @@ impl DMGRegister for AFRegister {
     }
     fn inc(&mut self) { panic!("Called inc on AF register") }
     fn overflowing_add(&mut self, value: u16) { panic!() }
+    fn read_lower(&self) -> u8 { self.flags.bits }
+    fn write_lower(&mut self, value: u8) { self.flags.bits = value; }
+    fn read_higher(&self) -> u8 { self.a }
+    fn write_higher(&mut self, value: u8) { self.a = value; }
     fn read_subreg(&self, subregister: Subregister) -> u8 {
         match subregister {
-            Subregister::Higher => self.a,
-            Subregister::Lower => self.flags.bits,
+            Subregister::Higher => self.read_higher(),
+            Subregister::Lower => self.read_lower(),
         }
     }
     fn write_subreg(&mut self, subregister: Subregister, value: u8) {
         match subregister {
-            Subregister::Higher => self.a = value,
-            Subregister::Lower => self.flags.bits = value
+            Subregister::Higher => self.write_higher(value),
+            Subregister::Lower => self.write_lower(value)
         }
     }
 }
