@@ -37,7 +37,9 @@ macro_rules! ld_16bit_register_immediate {
 }
 
 macro_rules! ld_register_pointer {
-    ($opcode: literal, $register:ident, $write_method:ident, $register_name:expr, $pointer:ident, $pointer_name:expr) => (
+    ($opcode: literal,
+     $register:ident, $write_method:ident, $register_name:expr,
+     $pointer:ident, $pointer_name:expr) => (
         Instruction{opcode: $opcode,
             mnemonic: concat!("LD ", $register_name, " (", $pointer_name, ")"),
             description: concat!("Put pointer ", $pointer_name, " in ", $register_name),
@@ -47,11 +49,26 @@ macro_rules! ld_register_pointer {
                 cpu.$register.$write_method(cpu.memory.read(cpu.$pointer.read()));
             }
         }
+    );
+    ($opcode: literal,
+     $register:ident, $write_method:ident, $register_name:expr,
+     $pointer:ident, $pointer_name:expr,
+     $pointer_addition: literal, $pointer_addition_symbol:expr) => (
+        Instruction{opcode: $opcode,
+            mnemonic: concat!("LD ", $register_name, " (", $pointer_name, $pointer_addition_symbol, ")"),
+            description: concat!("Put pointer ", $pointer_name, " in ", $register_name),
+            length_in_bytes: 1, cycles: "8", flags_changed: "",
+            implementation: |cpu| {
+                cpu.cycle_count += 8;
+                cpu.$register.$write_method(cpu.memory.read(cpu.$pointer.read()));
+                cpu.$pointer.overflowing_add($pointer_addition);
+            }
+        }
     )
 }
 
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 20] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 22] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -100,6 +117,8 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 20] = [
 
     ld_16bit_register_immediate!(0x21, reg_hl, "HL"),
 
+    ld_register_pointer!(0x2A, reg_af, write_a, "A", reg_hl, "HL", 0x0001, "+"),
+
     Instruction{opcode: 0x31, mnemonic: "LD SP,d16", description: "Load immediate to SP",
         length_in_bytes: 3, cycles: "12", flags_changed: "",
         implementation: |cpu| {
@@ -115,6 +134,8 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 20] = [
             cpu.memory.write(cpu.reg_hl.read(), cpu.reg_af.read_a());
             cpu.reg_hl.overflowing_add(0xFFFF);
         } },
+
+    ld_register_pointer!(0x3A, reg_af, write_a, "A", reg_hl, "HL", 0xFFFF, "-"),
 
     ld_8bit_register_immediate!(0x3E, reg_af, write_higher, "A"),
 
@@ -271,6 +292,26 @@ mod tests {
         cpu.reg_bc.write(0x0001);
         cpu.step();
         assert_eq!(cpu.reg_af.read_a(), 0x55);
+    }
+
+    #[test]
+    fn ld_a_pointer_hl_increment() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x2A, 0x55], vec![]));
+        cpu.reg_hl.write(0x0001);
+        cpu.step();
+        assert_eq!(cpu.reg_af.read_a(), 0x55);
+        assert_eq!(cpu.reg_hl.read(), 0x0002);
+    }
+
+    #[test]
+    fn ld_a_pointer_hl_decrement() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x3A, 0x55], vec![]));
+        cpu.reg_hl.write(0x0001);
+        cpu.step();
+        assert_eq!(cpu.reg_af.read_a(), 0x55);
+        assert_eq!(cpu.reg_hl.read(), 0x0000);
     }
 
     #[test]
