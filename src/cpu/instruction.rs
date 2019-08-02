@@ -9,12 +9,30 @@ macro_rules! ld_8bit_register_immediate {
         Instruction{
             opcode: $opcode,
             mnemonic: concat!("LD ", $register_name, ",d8"),
-            description: concat!("Load immediate to {}", $register_name),
+            description: concat!("Load immediate to ", $register_name),
             length_in_bytes: 2, cycles: "8", flags_changed: "",
             implementation: |cpu| {
                 let immediate = cpu.pop_u8_from_pc();
                 cpu.$register.$write_method(immediate);
                 cpu.cycle_count += 8;
+            }
+        }
+    )
+}
+
+macro_rules! ld_8bit_register_register {
+    ($opcode:literal,
+     $register_dest:ident, $write_method_dest:ident, $register_name_dest:expr,
+     $register_orig:ident, $read_method_orig:ident, $register_name_orig:expr
+    ) => (
+        Instruction{
+            opcode: $opcode,
+            mnemonic: concat!("LD ", $register_name_dest, ",", $register_name_orig),
+            description: concat!("Load ", $register_name_orig, " to ", $register_name_dest),
+            length_in_bytes: 1, cycles: "4", flags_changed: "",
+            implementation: |cpu| {
+                cpu.$register_dest.$write_method_dest(cpu.$register_orig.$read_method_orig());
+                cpu.cycle_count += 4;
             }
         }
     )
@@ -68,7 +86,7 @@ macro_rules! ld_register_pointer {
 }
 
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 29] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 36] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -136,6 +154,15 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 29] = [
         } },
 
     ld_register_pointer!(0x3A, reg_af, write_a, "A", reg_hl, "HL", 0xFFFF, "-"),
+
+    ld_8bit_register_register!(0x40, reg_bc, write_higher, "B",  reg_bc, read_higher, "B"),
+    ld_8bit_register_register!(0x41, reg_bc, write_higher, "B",  reg_bc, read_lower, "C"),
+    ld_8bit_register_register!(0x42, reg_bc, write_higher, "B",  reg_de, read_higher, "D"),
+    ld_8bit_register_register!(0x43, reg_bc, write_higher, "B",  reg_de, read_lower, "E"),
+    ld_8bit_register_register!(0x44, reg_bc, write_higher, "B",  reg_hl, read_higher, "H"),
+    ld_8bit_register_register!(0x45, reg_bc, write_higher, "B",  reg_hl, read_lower, "L"),
+
+    ld_8bit_register_register!(0x47, reg_bc, write_higher, "B",  reg_af, read_higher, "A"),
 
     ld_8bit_register_immediate!(0x3E, reg_af, write_higher, "A"),
 
@@ -476,5 +503,61 @@ mod tests {
         assert_eq!(cpu.stack_pointer.read(), 0xCFFE);
         assert_eq!(cpu.memory.read(0xCFFF), 0x03);
         assert_eq!(cpu.memory.read(0xCFFE), 0x00);
+    }
+
+    #[test]
+    fn ld_b_b() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x40], vec![]));
+        cpu.reg_bc.write_higher(0xF5);
+        cpu.step();
+        assert_eq!(cpu.reg_bc.read_higher(), 0xF5);
+    }
+
+    #[test]
+    fn ld_b_c() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x41], vec![]));
+        cpu.reg_bc.write_lower(0xF5);
+        cpu.step();
+        assert_eq!(cpu.reg_bc.read_higher(), 0xF5);
+    }
+
+    #[test]
+    fn ld_b_d() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x42], vec![]));
+        cpu.reg_de.write_higher(0xF5);
+        cpu.step();
+        assert_eq!(cpu.reg_bc.read_higher(), 0xF5);
+    }
+
+    #[test]
+    fn ld_b_e() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x43], vec![]));
+        cpu.reg_de.write_lower(0xF5);
+        cpu.step();
+        assert_eq!(cpu.reg_bc.read_higher(), 0xF5);
+    }
+
+    #[test]
+    fn ld_b_h() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x44], vec![]));
+        cpu.reg_hl.write_higher(0xF5);
+        cpu.step();
+        assert_eq!(cpu.reg_bc.read_higher(), 0xF5)
+    }
+
+    #[test]
+    fn ld_b_l() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x45], vec![]));
+        cpu.reg_hl.write_lower(0xF5);
+        cpu.step();
+        assert_eq!(cpu.reg_bc.read_higher(), 0xF5)
+    }
+
+    #[test]
+    fn ld_b_a() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x47], vec![]));
+        cpu.reg_af.write_higher(0xF5);
+        cpu.step();
+        assert_eq!(cpu.reg_bc.read_higher(), 0xF5)
     }
 }

@@ -5,7 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="77534023-f48c-484c-890f-135cfd6c2296" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/src/memory/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/memory/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/cpu/instruction.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/cpu/instruction.rs" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -106,7 +107,8 @@
       <workItem from="1564168936358" duration="13021000" />
       <workItem from="1564225384254" duration="13531000" />
       <workItem from="1564262673874" duration="22724000" />
-      <workItem from="1564682207107" duration="7167000" />
+      <workItem from="1564682207107" duration="7757000" />
+      <workItem from="1564731259787" duration="2298000" />
     </task>
     <servers />
   </component>
