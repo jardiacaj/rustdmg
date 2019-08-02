@@ -155,16 +155,26 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 36] = [
 
     ld_register_pointer!(0x3A, reg_af, write_a, "A", reg_hl, "HL", 0xFFFF, "-"),
 
+    ld_8bit_register_immediate!(0x3E, reg_af, write_higher, "A"),
+
     ld_8bit_register_register!(0x40, reg_bc, write_higher, "B",  reg_bc, read_higher, "B"),
     ld_8bit_register_register!(0x41, reg_bc, write_higher, "B",  reg_bc, read_lower, "C"),
     ld_8bit_register_register!(0x42, reg_bc, write_higher, "B",  reg_de, read_higher, "D"),
     ld_8bit_register_register!(0x43, reg_bc, write_higher, "B",  reg_de, read_lower, "E"),
     ld_8bit_register_register!(0x44, reg_bc, write_higher, "B",  reg_hl, read_higher, "H"),
     ld_8bit_register_register!(0x45, reg_bc, write_higher, "B",  reg_hl, read_lower, "L"),
-
+    ld_register_pointer!(0x46, reg_bc, write_higher, "B", reg_hl, "HL"),
     ld_8bit_register_register!(0x47, reg_bc, write_higher, "B",  reg_af, read_higher, "A"),
 
-    ld_8bit_register_immediate!(0x3E, reg_af, write_higher, "A"),
+    ld_register_pointer!(0x4E, reg_bc, write_lower, "C", reg_hl, "HL"),
+    
+    ld_register_pointer!(0x56, reg_de, write_higher, "D", reg_hl, "HL"),
+
+    ld_register_pointer!(0x5E, reg_de, write_lower, "E", reg_hl, "HL"),
+
+    ld_register_pointer!(0x66, reg_hl, write_higher, "H", reg_hl, "HL"),
+
+    ld_register_pointer!(0x6E, reg_hl, write_lower, "L", reg_hl, "HL"),
 
     Instruction{opcode: 0x77, mnemonic: "LD (HL),A", description: "Put A to pointer HL",
         length_in_bytes: 1, cycles: "8", flags_changed: "",
@@ -180,18 +190,6 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 36] = [
             cpu.reg_af.write_a(0);
             cpu.reg_af.flags.insert(Flags::Z);
         } },
-
-    ld_register_pointer!(0x46, reg_bc, write_higher, "B", reg_hl, "HL"),
-
-    ld_register_pointer!(0x4E, reg_bc, write_lower, "C", reg_hl, "HL"),
-
-    ld_register_pointer!(0x56, reg_de, write_higher, "D", reg_hl, "HL"),
-
-    ld_register_pointer!(0x5E, reg_de, write_lower, "E", reg_hl, "HL"),
-
-    ld_register_pointer!(0x66, reg_hl, write_higher, "H", reg_hl, "HL"),
-
-    ld_register_pointer!(0x6E, reg_hl, write_lower, "L", reg_hl, "HL"),
 
     Instruction{opcode: 0xCB, mnemonic: "CB", description: "CB prefix",
         length_in_bytes: 0, cycles: "0", flags_changed: "",
