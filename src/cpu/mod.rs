@@ -52,7 +52,7 @@ impl CPU {
 
     fn push_u16_to_stack(&mut self, value: u16) {
         self.push_u8_to_stack(value as u8);
-        self.push_u8_to_stack((value << 8) as u8);
+        self.push_u8_to_stack((value >> 8) as u8);
     }
 
     fn pop_u8_from_stack(&mut self) -> u8 {

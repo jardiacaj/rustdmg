@@ -4,6 +4,21 @@ use crate::memory::MemoryZone;
 use crate::cpu::register::DMGRegister;
 use crate::cpu::register::Subregister;
 
+macro_rules! push {
+    ($opcode:literal, $register:ident, $register_name:expr) => (
+        Instruction{
+            opcode: $opcode,
+            mnemonic: concat!("PUSH ", $register_name),
+            description: concat!("Push ", $register_name),
+            length_in_bytes: 1, cycles: "16", flags_changed: "",
+            implementation: |cpu| {
+                cpu.push_u16_to_stack(cpu.$register.read());
+                cpu.cycle_count += 16;
+            }
+        }
+    )
+}
+
 macro_rules! ld_8bit_register_immediate {
     ($opcode:literal, $register:ident, $write_method:ident, $register_name:expr) => (
         Instruction{
@@ -86,7 +101,7 @@ macro_rules! ld_register_pointer {
 }
 
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 76] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 80] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -231,6 +246,8 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 76] = [
             cpu.reg_af.flags.insert(Flags::Z);
         } },
 
+    push!(0xC5, reg_bc, "BC"),
+
     Instruction{opcode: 0xCB, mnemonic: "CB", description: "CB prefix",
         length_in_bytes: 0, cycles: "0", flags_changed: "",
         implementation: |cpu| cpu.run_cb_op() },
@@ -243,6 +260,8 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 76] = [
             cpu.push_u16_to_stack(cpu.program_counter.read());
             cpu.program_counter.write(new_pc);
         } },
+
+    push!(0xD5, reg_de, "DE"),
 
     Instruction{opcode: 0xE0, mnemonic: "LD ($FF00+imm), A", description: "Put A to pointer 0xFF00 + immediate",
         length_in_bytes: 2, cycles: "12", flags_changed: "",
@@ -260,6 +279,8 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 76] = [
             cpu.memory.write(address, cpu.reg_af.read_a());
         } },
 
+    push!(0xE5, reg_hl, "HL"),
+    push!(0xF5, reg_af, "AF"),
 ];
 
 pub const INSTRUCTIONS_CB: [Instruction; 1] = [
@@ -645,5 +666,57 @@ mod tests {
         cpu.step();
         assert_eq!(cpu.cycle_count, 8);
         assert_eq!(cpu.reg_af.read_higher(), 0xBB);
+    }
+
+    #[test]
+    fn push_bc() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xC5], vec![]));
+        cpu.stack_pointer.write(0xD000);
+        cpu.reg_bc.write(0x1234);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 16);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.stack_pointer.read(), 0xCFFE);
+        assert_eq!(cpu.memory.read(0xCFFF), 0x34);
+        assert_eq!(cpu.memory.read(0xCFFE), 0x12);
+    }
+
+    #[test]
+    fn push_de() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xD5], vec![]));
+        cpu.stack_pointer.write(0xD000);
+        cpu.reg_de.write(0x1234);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 16);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.stack_pointer.read(), 0xCFFE);
+        assert_eq!(cpu.memory.read(0xCFFF), 0x34);
+        assert_eq!(cpu.memory.read(0xCFFE), 0x12);
+    }
+
+    #[test]
+    fn push_hl() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xE5], vec![]));
+        cpu.stack_pointer.write(0xD000);
+        cpu.reg_hl.write(0x1234);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 16);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.stack_pointer.read(), 0xCFFE);
+        assert_eq!(cpu.memory.read(0xCFFF), 0x34);
+        assert_eq!(cpu.memory.read(0xCFFE), 0x12);
+    }
+
+    #[test]
+    fn push_af() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xF5], vec![]));
+        cpu.stack_pointer.write(0xD000);
+        cpu.reg_af.write(0x1234);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 16);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.stack_pointer.read(), 0xCFFE);
+        assert_eq!(cpu.memory.read(0xCFFF), 0x34);
+        assert_eq!(cpu.memory.read(0xCFFE), 0x12);
     }
 }

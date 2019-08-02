@@ -67,7 +67,7 @@ impl AFRegister {
 }
 
 impl DMGRegister for AFRegister {
-    fn read(&self) -> u16 { (self.a as u16) << 8 + self.flags.bits }
+    fn read(&self) -> u16 { ((self.a as u16) << 8) + (self.flags.bits as u16) }
     fn write(&mut self, value: u16) {
         self.a = (value >> 8) as u8;
         self.flags.bits = value as u8;
