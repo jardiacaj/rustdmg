@@ -86,7 +86,7 @@ macro_rules! ld_register_pointer {
 }
 
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 36] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 71] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -166,15 +166,50 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 36] = [
     ld_register_pointer!(0x46, reg_bc, write_higher, "B", reg_hl, "HL"),
     ld_8bit_register_register!(0x47, reg_bc, write_higher, "B",  reg_af, read_higher, "A"),
 
+    ld_8bit_register_register!(0x48, reg_bc, write_lower, "C",  reg_bc, read_higher, "B"),
+    ld_8bit_register_register!(0x49, reg_bc, write_lower, "C",  reg_bc, read_lower, "C"),
+    ld_8bit_register_register!(0x4A, reg_bc, write_lower, "C",  reg_de, read_higher, "D"),
+    ld_8bit_register_register!(0x4B, reg_bc, write_lower, "C",  reg_de, read_lower, "E"),
+    ld_8bit_register_register!(0x4C, reg_bc, write_lower, "C",  reg_hl, read_higher, "H"),
+    ld_8bit_register_register!(0x4D, reg_bc, write_lower, "C",  reg_hl, read_lower, "L"),
     ld_register_pointer!(0x4E, reg_bc, write_lower, "C", reg_hl, "HL"),
-    
+    ld_8bit_register_register!(0x4F, reg_bc, write_lower, "C",  reg_af, read_higher, "A"),
+
+    ld_8bit_register_register!(0x50, reg_de, write_higher, "D",  reg_bc, read_higher, "B"),
+    ld_8bit_register_register!(0x51, reg_de, write_higher, "D",  reg_bc, read_lower, "C"),
+    ld_8bit_register_register!(0x52, reg_de, write_higher, "D",  reg_de, read_higher, "D"),
+    ld_8bit_register_register!(0x53, reg_de, write_higher, "D",  reg_de, read_lower, "E"),
+    ld_8bit_register_register!(0x54, reg_de, write_higher, "D",  reg_hl, read_higher, "H"),
+    ld_8bit_register_register!(0x55, reg_de, write_higher, "D",  reg_hl, read_lower, "L"),
     ld_register_pointer!(0x56, reg_de, write_higher, "D", reg_hl, "HL"),
+    ld_8bit_register_register!(0x57, reg_de, write_higher, "D",  reg_af, read_higher, "A"),
 
+    ld_8bit_register_register!(0x58, reg_de, write_lower, "E",  reg_bc, read_higher, "B"),
+    ld_8bit_register_register!(0x59, reg_de, write_lower, "E",  reg_bc, read_lower, "C"),
+    ld_8bit_register_register!(0x5A, reg_de, write_lower, "E",  reg_de, read_higher, "D"),
+    ld_8bit_register_register!(0x5B, reg_de, write_lower, "E",  reg_de, read_lower, "E"),
+    ld_8bit_register_register!(0x5C, reg_de, write_lower, "E",  reg_hl, read_higher, "H"),
+    ld_8bit_register_register!(0x5D, reg_de, write_lower, "E",  reg_hl, read_lower, "L"),
     ld_register_pointer!(0x5E, reg_de, write_lower, "E", reg_hl, "HL"),
+    ld_8bit_register_register!(0x5F, reg_de, write_lower, "E",  reg_af, read_higher, "A"),
 
+    ld_8bit_register_register!(0x60, reg_hl, write_higher, "H",  reg_bc, read_higher, "B"),
+    ld_8bit_register_register!(0x61, reg_hl, write_higher, "H",  reg_bc, read_lower, "C"),
+    ld_8bit_register_register!(0x62, reg_hl, write_higher, "H",  reg_de, read_higher, "D"),
+    ld_8bit_register_register!(0x63, reg_hl, write_higher, "H",  reg_de, read_lower, "E"),
+    ld_8bit_register_register!(0x64, reg_hl, write_higher, "H",  reg_hl, read_higher, "H"),
+    ld_8bit_register_register!(0x65, reg_hl, write_higher, "H",  reg_hl, read_lower, "L"),
     ld_register_pointer!(0x66, reg_hl, write_higher, "H", reg_hl, "HL"),
+    ld_8bit_register_register!(0x67, reg_hl, write_higher, "H",  reg_af, read_higher, "A"),
 
+    ld_8bit_register_register!(0x68, reg_hl, write_lower, "L",  reg_bc, read_higher, "B"),
+    ld_8bit_register_register!(0x69, reg_hl, write_lower, "L",  reg_bc, read_lower, "C"),
+    ld_8bit_register_register!(0x6A, reg_hl, write_lower, "L",  reg_de, read_higher, "D"),
+    ld_8bit_register_register!(0x6B, reg_hl, write_lower, "L",  reg_de, read_lower, "E"),
+    ld_8bit_register_register!(0x6C, reg_hl, write_lower, "L",  reg_hl, read_higher, "H"),
+    ld_8bit_register_register!(0x6D, reg_hl, write_lower, "L",  reg_hl, read_lower, "L"),
     ld_register_pointer!(0x6E, reg_hl, write_lower, "L", reg_hl, "HL"),
+    ld_8bit_register_register!(0x6F, reg_hl, write_lower, "L",  reg_af, read_higher, "A"),
 
     Instruction{opcode: 0x77, mnemonic: "LD (HL),A", description: "Put A to pointer HL",
         length_in_bytes: 1, cycles: "8", flags_changed: "",
