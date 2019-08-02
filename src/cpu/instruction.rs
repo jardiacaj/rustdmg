@@ -86,7 +86,7 @@ macro_rules! ld_register_pointer {
 }
 
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 71] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 76] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -103,6 +103,8 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 71] = [
         length_in_bytes: 1, cycles: "4", flags_changed: "Z0H",
         implementation: |cpu| panic!("Not implemented") },
 
+    ld_8bit_register_immediate!(0x06, reg_bc, write_higher, "B"),
+
     Instruction{opcode: 0x0C, mnemonic: "INC C", description: "Increment C",
         length_in_bytes: 1, cycles: "4", flags_changed: "Z0H-",
         implementation: |cpu| {
@@ -118,8 +120,9 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 71] = [
 
     ld_8bit_register_immediate!(0x0E, reg_bc, write_lower, "C"),
     ld_16bit_register_immediate!(0x11, reg_de, "DE"),
-
+    ld_8bit_register_immediate!(0x16, reg_de, write_higher, "D"),
     ld_register_pointer!(0x1A, reg_af, write_a, "A", reg_de, "DE"),
+    ld_8bit_register_immediate!(0x1E, reg_de, write_lower, "E"),
 
     Instruction{opcode: 0x20, mnemonic: "JR NZ,r8", description: "Jump relative if not zero",
         length_in_bytes: 2, cycles: "8 or 12", flags_changed: "",
@@ -134,8 +137,10 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 71] = [
         } },
 
     ld_16bit_register_immediate!(0x21, reg_hl, "HL"),
+    ld_8bit_register_immediate!(0x26, reg_hl, write_higher, "H"),
 
     ld_register_pointer!(0x2A, reg_af, write_a, "A", reg_hl, "HL", 0x0001, "+"),
+    ld_8bit_register_immediate!(0x2E, reg_hl, write_lower, "L"),
 
     Instruction{opcode: 0x31, mnemonic: "LD SP,d16", description: "Load immediate to SP",
         length_in_bytes: 3, cycles: "12", flags_changed: "",
@@ -519,14 +524,6 @@ mod tests {
     }
 
     #[test]
-    fn ld_c_immediate() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x0E, 0xAA], vec![]));
-        cpu.step();
-        assert_eq!(cpu.program_counter.read(), 2);
-        assert_eq!(cpu.reg_bc.read_lower(), 0xAA);
-    }
-
-    #[test]
     fn call() {
         let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xCD, 0x34, 0x12], vec![]));
         cpu.stack_pointer.write(0xD000);
@@ -592,5 +589,61 @@ mod tests {
         cpu.reg_af.write_higher(0xF5);
         cpu.step();
         assert_eq!(cpu.reg_bc.read_higher(), 0xF5)
+    }
+
+    #[test]
+    fn ld_b_immediate() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x06, 0xBB], vec![]));
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 8);
+        assert_eq!(cpu.reg_bc.read_higher(), 0xBB);
+    }
+
+    #[test]
+    fn ld_c_immediate() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x0E, 0xBB], vec![]));
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 8);
+        assert_eq!(cpu.reg_bc.read_lower(), 0xBB);
+    }
+
+    #[test]
+    fn ld_d_immediate() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x16, 0xBB], vec![]));
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 8);
+        assert_eq!(cpu.reg_de.read_higher(), 0xBB);
+    }
+
+    #[test]
+    fn ld_e_immediate() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x1E, 0xBB], vec![]));
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 8);
+        assert_eq!(cpu.reg_de.read_lower(), 0xBB);
+    }
+
+    #[test]
+    fn ld_h_immediate() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x26, 0xBB], vec![]));
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 8);
+        assert_eq!(cpu.reg_hl.read_higher(), 0xBB);
+    }
+
+    #[test]
+    fn ld_l_immediate() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x2E, 0xBB], vec![]));
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 8);
+        assert_eq!(cpu.reg_hl.read_lower(), 0xBB);
+    }
+
+    #[test]
+    fn ld_a_immediate() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x3E, 0xBB], vec![]));
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 8);
+        assert_eq!(cpu.reg_af.read_higher(), 0xBB);
     }
 }
