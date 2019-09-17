@@ -283,7 +283,21 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 80] = [
     push!(0xF5, reg_af, "AF"),
 ];
 
-pub const INSTRUCTIONS_CB: [Instruction; 1] = [
+pub const INSTRUCTIONS_CB: [Instruction; 2] = [
+
+    Instruction{opcode: 0x11, mnemonic: "RL C", description: "Rotate C left trough carry",
+        length_in_bytes: 2, cycles: "8", flags_changed: "Z00C",
+        implementation: |cpu| {
+            cpu.cycle_count += 8;
+            cpu.reg_af.flags.remove(Flags::N);
+            cpu.reg_af.flags.remove(Flags::H);
+            let set_carry = (cpu.reg_bc.read_lower() & 0b10000000) != 0;
+            let mut new_value = cpu.reg_bc.read_lower() << 1;
+            if cpu.reg_af.flags.contains(Flags::C) { new_value += 1; }
+            cpu.reg_bc.write_lower(new_value);
+            cpu.reg_af.flags.set(Flags::C, set_carry);
+            cpu.reg_af.flags.set(Flags::Z, new_value == 0);
+        } },
 
     Instruction{opcode: 0x7C, mnemonic: "BIT 7,H", description: "Test bit 7 of H",
         length_in_bytes: 2, cycles: "8", flags_changed: "Z01-",
@@ -718,5 +732,39 @@ mod tests {
         assert_eq!(cpu.stack_pointer.read(), 0xCFFE);
         assert_eq!(cpu.memory.read(0xCFFF), 0x34);
         assert_eq!(cpu.memory.read(0xCFFE), 0x12);
+    }
+
+    #[test]
+    fn rlc_no_carry() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xCB, 0x11], vec![]));
+        cpu.reg_bc.write_lower(0b01010010);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 8);
+        assert_eq!(cpu.program_counter.read(), 0x0002);
+        assert_eq!(cpu.reg_bc.read_lower(), 0b10100100);
+        assert_eq!(cpu.reg_af.flags, Flags::empty());
+    }
+
+    #[test]
+    fn rlc_to_carry() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xCB, 0x11], vec![]));
+        cpu.reg_bc.write_lower(0b11010010);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 8);
+        assert_eq!(cpu.program_counter.read(), 0x0002);
+        assert_eq!(cpu.reg_bc.read_lower(), 0b10100100);
+        assert_eq!(cpu.reg_af.flags, Flags::C);
+    }
+
+    #[test]
+    fn rlc_from_carry() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xCB, 0x11], vec![]));
+        cpu.reg_bc.write_lower(0);
+        cpu.reg_af.flags.insert(Flags::C);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 8);
+        assert_eq!(cpu.program_counter.read(), 0x0002);
+        assert_eq!(cpu.reg_bc.read_lower(), 1);
+        assert_eq!(cpu.reg_af.flags, Flags::empty());
     }
 }
