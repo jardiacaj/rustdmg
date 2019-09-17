@@ -101,6 +101,29 @@ macro_rules! ld_register_pointer {
 }
 
 
+macro_rules! rotate_left_trough_carry {
+    ($opcode: literal,
+     $register:ident, $read_method:ident, $write_method:ident, $register_name:expr) => (
+        Instruction{opcode: $opcode,
+            mnemonic: concat!("RL ", $register_name),
+            description: concat!("Rotate ", $register_name, " left trough carry"),
+            length_in_bytes: 2, cycles: "8", flags_changed: "Z00C",
+            implementation: |cpu| {
+                cpu.cycle_count += 8;
+                cpu.reg_af.flags.remove(Flags::N);
+                cpu.reg_af.flags.remove(Flags::H);
+                let set_carry = (cpu.$register.$read_method() & 0b10000000) != 0;
+                let mut new_value = cpu.$register.$read_method() << 1;
+                if cpu.reg_af.flags.contains(Flags::C) { new_value += 1; }
+                cpu.$register.$write_method(new_value);
+                cpu.reg_af.flags.set(Flags::C, set_carry);
+                cpu.reg_af.flags.set(Flags::Z, new_value == 0);
+            }
+        }
+    )
+}
+
+
 pub const INSTRUCTIONS_NOCB: [Instruction; 80] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
@@ -283,21 +306,17 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 80] = [
     push!(0xF5, reg_af, "AF"),
 ];
 
-pub const INSTRUCTIONS_CB: [Instruction; 2] = [
+pub const INSTRUCTIONS_CB: [Instruction; 8] = [
 
-    Instruction{opcode: 0x11, mnemonic: "RL C", description: "Rotate C left trough carry",
-        length_in_bytes: 2, cycles: "8", flags_changed: "Z00C",
-        implementation: |cpu| {
-            cpu.cycle_count += 8;
-            cpu.reg_af.flags.remove(Flags::N);
-            cpu.reg_af.flags.remove(Flags::H);
-            let set_carry = (cpu.reg_bc.read_lower() & 0b10000000) != 0;
-            let mut new_value = cpu.reg_bc.read_lower() << 1;
-            if cpu.reg_af.flags.contains(Flags::C) { new_value += 1; }
-            cpu.reg_bc.write_lower(new_value);
-            cpu.reg_af.flags.set(Flags::C, set_carry);
-            cpu.reg_af.flags.set(Flags::Z, new_value == 0);
-        } },
+    rotate_left_trough_carry!(0x10, reg_bc, read_higher, write_higher, "B"),
+    rotate_left_trough_carry!(0x11, reg_bc, read_lower, write_lower, "C"),
+    rotate_left_trough_carry!(0x12, reg_de, read_higher, write_higher, "D"),
+    rotate_left_trough_carry!(0x13, reg_de, read_lower, write_lower, "E"),
+    rotate_left_trough_carry!(0x14, reg_hl, read_higher, write_higher, "H"),
+    rotate_left_trough_carry!(0x15, reg_hl, read_lower, write_lower, "L"),
+
+    rotate_left_trough_carry!(0x17, reg_af, read_lower, write_lower, "A"),
+
 
     Instruction{opcode: 0x7C, mnemonic: "BIT 7,H", description: "Test bit 7 of H",
         length_in_bytes: 2, cycles: "8", flags_changed: "Z01-",
