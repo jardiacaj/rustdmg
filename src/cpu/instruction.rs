@@ -35,6 +35,25 @@ macro_rules! pop {
     )
 }
 
+macro_rules! inc {
+    ($opcode:literal, $register:ident, $write_method:ident, $read_method:ident, $register_name:expr) => (
+        Instruction{
+            opcode: $opcode,
+            mnemonic: concat!("INC ", $register_name),
+            description: concat!("Increment ", $register_name),
+            length_in_bytes: 1, cycles: "4", flags_changed: "Z0H-",
+            implementation: |cpu| {
+                let target_value = cpu.$register.$read_method().overflowing_add(1).0;
+                cpu.$register.$write_method(target_value);
+                cpu.reg_af.flags.remove(Flags::N);
+                cpu.reg_af.flags.set(Flags::Z, target_value == 0);
+                cpu.reg_af.flags.set(Flags::H, target_value & 0x0F == 0);
+                cpu.cycle_count += 4;
+            }
+        }
+    )
+}
+
 macro_rules! ld_8bit_register_immediate {
     ($opcode:literal, $register:ident, $write_method:ident, $register_name:expr) => (
         Instruction{
@@ -157,7 +176,7 @@ macro_rules! rotate_left_trough_carry {
 }
 
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 85] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 90] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -170,30 +189,21 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 85] = [
     Instruction{opcode: 0x03, mnemonic: "INC BC", description: "Increment BC",
         length_in_bytes: 1, cycles: "8", flags_changed: "",
         implementation: |cpu| panic!("Not implemented") },
-    Instruction{opcode: 0x04, mnemonic: "INC B", description: "Increment B",
-        length_in_bytes: 1, cycles: "4", flags_changed: "Z0H",
-        implementation: |cpu| panic!("Not implemented") },
+    inc!(0x04, reg_bc, write_higher, read_higher, "B"),
 
     ld_8bit_register_immediate!(0x06, reg_bc, write_higher, "B"),
 
-    Instruction{opcode: 0x0C, mnemonic: "INC C", description: "Increment C",
-        length_in_bytes: 1, cycles: "4", flags_changed: "Z0H-",
-        implementation: |cpu| {
-            cpu.cycle_count += 4;
-            let target_value = cpu.reg_bc.read_lower().overflowing_add(1).0;
-            cpu.reg_bc.write_lower(target_value);
-            cpu.reg_af.flags.remove(Flags::N);
-            cpu.reg_af.flags.set(Flags::Z, target_value == 0);
-            cpu.reg_af.flags.set(Flags::H, target_value & 0x0F == 0);
-        } },
-
     ld_register_pointer!(0x0A, reg_af, write_a, "A", reg_bc, "BC"),
+
+    inc!(0x0C, reg_bc, write_lower, read_lower, "C"),
 
     ld_8bit_register_immediate!(0x0E, reg_bc, write_lower, "C"),
     ld_16bit_register_immediate!(0x11, reg_de, "DE"),
+    inc!(0x14, reg_de, write_higher, read_higher, "D"),
     ld_8bit_register_immediate!(0x16, reg_de, write_higher, "D"),
     rotate_left_trough_carry!(0x17, reg_af, read_higher, write_higher, "A", fast),
     ld_register_pointer!(0x1A, reg_af, write_a, "A", reg_de, "DE"),
+    inc!(0x1C, reg_de, write_lower, read_lower, "E"),
     ld_8bit_register_immediate!(0x1E, reg_de, write_lower, "E"),
 
     Instruction{opcode: 0x20, mnemonic: "JR NZ,r8", description: "Jump relative if not zero",
@@ -209,9 +219,11 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 85] = [
         } },
 
     ld_16bit_register_immediate!(0x21, reg_hl, "HL"),
+    inc!(0x24, reg_hl, write_higher, read_higher, "H"),
     ld_8bit_register_immediate!(0x26, reg_hl, write_higher, "H"),
 
     ld_register_pointer!(0x2A, reg_af, write_a, "A", reg_hl, "HL", 0x0001, "+"),
+    inc!(0x2C, reg_hl, write_lower, read_lower, "L"),
     ld_8bit_register_immediate!(0x2E, reg_hl, write_lower, "L"),
 
     Instruction{opcode: 0x31, mnemonic: "LD SP,d16", description: "Load immediate to SP",
@@ -231,6 +243,8 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 85] = [
         } },
 
     ld_register_pointer!(0x3A, reg_af, write_a, "A", reg_hl, "HL", 0xFFFF, "-"),
+
+    inc!(0x3C, reg_af, write_higher, read_higher, "A"),
 
     ld_8bit_register_immediate!(0x3E, reg_af, write_higher, "A"),
 
@@ -398,12 +412,84 @@ mod tests {
     }
 
     #[test]
+    fn inc_b() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x04], vec![]));
+        cpu.reg_bc.write_higher(0x4F);
+        cpu.step();
+        assert_eq!(cpu.reg_bc.read_higher(), 0x50);
+        assert!(!cpu.reg_af.flags.contains(Flags::Z));
+        assert!(!cpu.reg_af.flags.contains(Flags::N));
+        assert!(cpu.reg_af.flags.contains(Flags::H));
+    }
+
+    #[test]
     fn inc_c() {
         let mut cpu = CPU::new(
             MemoryManager::new_from_vecs(vec![0x0C], vec![]));
         cpu.reg_bc.write_lower(0x4F);
         cpu.step();
         assert_eq!(cpu.reg_bc.read_lower(), 0x50);
+        assert!(!cpu.reg_af.flags.contains(Flags::Z));
+        assert!(!cpu.reg_af.flags.contains(Flags::N));
+        assert!(cpu.reg_af.flags.contains(Flags::H));
+    }
+
+    #[test]
+    fn inc_d() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x14], vec![]));
+        cpu.reg_de.write_higher(0x4F);
+        cpu.step();
+        assert_eq!(cpu.reg_de.read_higher(), 0x50);
+        assert!(!cpu.reg_af.flags.contains(Flags::Z));
+        assert!(!cpu.reg_af.flags.contains(Flags::N));
+        assert!(cpu.reg_af.flags.contains(Flags::H));
+    }
+
+    #[test]
+    fn inc_e() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x1C], vec![]));
+        cpu.reg_de.write_lower(0x4F);
+        cpu.step();
+        assert_eq!(cpu.reg_de.read_lower(), 0x50);
+        assert!(!cpu.reg_af.flags.contains(Flags::Z));
+        assert!(!cpu.reg_af.flags.contains(Flags::N));
+        assert!(cpu.reg_af.flags.contains(Flags::H));
+    }
+
+    #[test]
+    fn inc_h() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x24], vec![]));
+        cpu.reg_hl.write_higher(0x4F);
+        cpu.step();
+        assert_eq!(cpu.reg_hl.read_higher(), 0x50);
+        assert!(!cpu.reg_af.flags.contains(Flags::Z));
+        assert!(!cpu.reg_af.flags.contains(Flags::N));
+        assert!(cpu.reg_af.flags.contains(Flags::H));
+    }
+
+    #[test]
+    fn inc_l() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x2C], vec![]));
+        cpu.reg_hl.write_lower(0x4F);
+        cpu.step();
+        assert_eq!(cpu.reg_hl.read_lower(), 0x50);
+        assert!(!cpu.reg_af.flags.contains(Flags::Z));
+        assert!(!cpu.reg_af.flags.contains(Flags::N));
+        assert!(cpu.reg_af.flags.contains(Flags::H));
+    }
+
+    #[test]
+    fn inc_a() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x3C], vec![]));
+        cpu.reg_af.write_higher(0x4F);
+        cpu.step();
+        assert_eq!(cpu.reg_af.read_higher(), 0x50);
         assert!(!cpu.reg_af.flags.contains(Flags::Z));
         assert!(!cpu.reg_af.flags.contains(Flags::N));
         assert!(cpu.reg_af.flags.contains(Flags::H));
