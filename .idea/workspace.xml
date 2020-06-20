@@ -5,9 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="77534023-f48c-484c-890f-135cfd6c2296" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/cpu/instruction.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/cpu/instruction.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/cpu/register.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/cpu/register.rs" afterDir="false" />
     </list>
-    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -27,12 +28,18 @@
     <option name="directoryName" value="jHenNYVG" />
   </component>
   <component name="ProjectId" id="1OYyRiusLFZfYs1woYL227N6nr2" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
   <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="org.rust.cargo.project.model.PROJECT_DISCOVERY" value="true" />
-    <property name="settings.editor.selected.configurable" value="configurable.group.appearance" />
+    <property name="settings.editor.selected.configurable" value="editor.preferences.fonts.default" />
   </component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
@@ -40,19 +47,7 @@
       <recent name="$PROJECT_DIR$/src/memory" />
     </key>
   </component>
-  <component name="RunDashboard">
-    <option name="ruleStates">
-      <list>
-        <RuleState>
-          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
-        </RuleState>
-        <RuleState>
-          <option name="name" value="StatusDashboardGroupingRule" />
-        </RuleState>
-      </list>
-    </option>
-  </component>
-  <component name="RunManager" selected="Cargo Command.Unnamed">
+  <component name="RunManager" selected="Cargo Command.Test">
     <configuration name="Run rustdmg" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
       <option name="channel" value="DEFAULT" />
       <option name="command" value="run --package rustdmg --bin rustdmg" />
@@ -66,7 +61,7 @@
         <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
       </method>
     </configuration>
-    <configuration name="Unnamed" type="CargoCommandRunConfiguration" factoryName="Cargo Command" nameIsGenerated="true">
+    <configuration name="Run" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
       <option name="channel" value="DEFAULT" />
       <option name="command" value="run" />
       <option name="allFeatures" value="false" />
@@ -79,6 +74,24 @@
         <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
       </method>
     </configuration>
+    <configuration name="Test" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
+      <option name="channel" value="DEFAULT" />
+      <option name="command" value="test" />
+      <option name="allFeatures" value="false" />
+      <option name="nocapture" value="false" />
+      <option name="emulateTerminal" value="false" />
+      <option name="backtrace" value="SHORT" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <envs />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
+    <list>
+      <item itemvalue="Cargo Command.Test" />
+      <item itemvalue="Cargo Command.Run" />
+      <item itemvalue="Cargo Command.Run rustdmg" />
+    </list>
   </component>
   <component name="RustProjectSettings">
     <option name="toolchainHomeDirectory" value="/usr/bin" />
@@ -125,13 +138,42 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State>
-              <option name="COLUMN_ORDER" />
-            </State>
+            <State />
           </value>
         </entry>
       </map>
     </option>
+    <option name="oldMeFiltersMigrated" value="true" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="417" y="718" width="1250" height="742" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1592679088431">
+      <screen x="0" y="0" width="3840" height="2160" />
+    </state>
+    <state x="417" y="718" width="1250" height="742" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.3840.2160@0.0.3840.2160" timestamp="1592679088431" />
+    <state width="1852" height="618" key="GridCell.Tab.0.bottom" timestamp="1592675243509">
+      <screen x="0" y="0" width="3840" height="2160" />
+    </state>
+    <state width="1852" height="618" key="GridCell.Tab.0.bottom/0.0.3840.2160@0.0.3840.2160" timestamp="1592675243509" />
+    <state width="1852" height="618" key="GridCell.Tab.0.center" timestamp="1592675243508">
+      <screen x="0" y="0" width="3840" height="2160" />
+    </state>
+    <state width="1852" height="618" key="GridCell.Tab.0.center/0.0.3840.2160@0.0.3840.2160" timestamp="1592675243508" />
+    <state width="1852" height="618" key="GridCell.Tab.0.left" timestamp="1592675243507">
+      <screen x="0" y="0" width="3840" height="2160" />
+    </state>
+    <state width="1852" height="618" key="GridCell.Tab.0.left/0.0.3840.2160@0.0.3840.2160" timestamp="1592675243507" />
+    <state width="1852" height="618" key="GridCell.Tab.0.right" timestamp="1592675243508">
+      <screen x="0" y="0" width="3840" height="2160" />
+    </state>
+    <state width="1852" height="618" key="GridCell.Tab.0.right/0.0.3840.2160@0.0.3840.2160" timestamp="1592675243508" />
+    <state x="539" y="752" width="1579" height="1229" key="SettingsEditor" timestamp="1592675350262">
+      <screen x="0" y="0" width="3840" height="2160" />
+    </state>
+    <state x="539" y="752" width="1579" height="1229" key="SettingsEditor/0.0.3840.2160@0.0.3840.2160" timestamp="1592675350262" />
+    <state x="369" y="182" width="1177" height="1976" key="search.everywhere.popup" timestamp="1592675332431">
+      <screen x="0" y="0" width="3840" height="2160" />
+    </state>
+    <state x="369" y="182" width="1177" height="1976" key="search.everywhere.popup/0.0.3840.2160@0.0.3840.2160" timestamp="1592675332431" />
   </component>
   <component name="masterDetails">
     <states>

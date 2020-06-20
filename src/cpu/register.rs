@@ -55,6 +55,12 @@ bitflags! {
     }
 }
 
+impl Flags {
+    pub fn clear(&mut self) {
+        self.bits = 0;
+    }
+}
+
 pub struct AFRegister {
     a: u8,
     pub flags: Flags
@@ -117,5 +123,13 @@ mod tests {
         assert_eq!(reg.read(), 0x1234);
         assert_eq!(reg.read_subreg(Subregister::Higher), 0x12);
         assert_eq!(reg.read_subreg(Subregister::Lower), 0x34);
+    }
+
+    #[test]
+    fn clear_flags() {
+        let mut reg = Flags::Z;
+        assert_eq!(reg.bits(), 0b10000000);
+        reg.clear();
+        assert_eq!(reg.bits(), 0);
     }
 }

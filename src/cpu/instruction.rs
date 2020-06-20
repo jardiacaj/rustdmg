@@ -89,7 +89,7 @@ macro_rules! ld_register_pointer {
      $pointer_addition: literal, $pointer_addition_symbol:expr) => (
         Instruction{opcode: $opcode,
             mnemonic: concat!("LD ", $register_name, " (", $pointer_name, $pointer_addition_symbol, ")"),
-            description: concat!("Put pointer ", $pointer_name, " in ", $register_name),
+            description: concat!("Put pointer ", $pointer_name, " in ", $register_name, $pointer_addition_symbol),
             length_in_bytes: 1, cycles: "8", flags_changed: "",
             implementation: |cpu| {
                 cpu.cycle_count += 8;
@@ -103,7 +103,7 @@ macro_rules! ld_register_pointer {
 
 macro_rules! rotate_left_trough_carry {
     ($opcode: literal,
-     $register:ident, $read_method:ident, $write_method:ident, $register_name:expr) => (
+     $register:ident, $read_method:ident, $write_method:ident, $register_name:expr, regular) => (
         Instruction{opcode: $opcode,
             mnemonic: concat!("RL ", $register_name),
             description: concat!("Rotate ", $register_name, " left trough carry"),
@@ -120,11 +120,28 @@ macro_rules! rotate_left_trough_carry {
                 cpu.reg_af.flags.set(Flags::Z, new_value == 0);
             }
         }
+    );
+    ($opcode: literal,
+     $register:ident, $read_method:ident, $write_method:ident, $register_name:expr, fast) => (
+        Instruction{opcode: $opcode,
+            mnemonic: concat!("RL", $register_name),
+            description: concat!("Rotate ", $register_name, " left trough carry (fast)"),
+            length_in_bytes: 1, cycles: "4", flags_changed: "000C",
+            implementation: |cpu| {
+                cpu.cycle_count += 4;
+                let set_carry = (cpu.$register.$read_method() & 0b10000000) != 0;
+                let mut new_value = cpu.$register.$read_method() << 1;
+                if cpu.reg_af.flags.contains(Flags::C) { new_value += 1; }
+                cpu.$register.$write_method(new_value);
+                cpu.reg_af.flags.clear();
+                cpu.reg_af.flags.set(Flags::C, set_carry);
+            }
+        }
     )
 }
 
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 80] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 81] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -159,6 +176,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 80] = [
     ld_8bit_register_immediate!(0x0E, reg_bc, write_lower, "C"),
     ld_16bit_register_immediate!(0x11, reg_de, "DE"),
     ld_8bit_register_immediate!(0x16, reg_de, write_higher, "D"),
+    rotate_left_trough_carry!(0x17, reg_af, read_higher, write_higher, "A", fast),
     ld_register_pointer!(0x1A, reg_af, write_a, "A", reg_de, "DE"),
     ld_8bit_register_immediate!(0x1E, reg_de, write_lower, "E"),
 
@@ -308,14 +326,14 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 80] = [
 
 pub const INSTRUCTIONS_CB: [Instruction; 8] = [
 
-    rotate_left_trough_carry!(0x10, reg_bc, read_higher, write_higher, "B"),
-    rotate_left_trough_carry!(0x11, reg_bc, read_lower, write_lower, "C"),
-    rotate_left_trough_carry!(0x12, reg_de, read_higher, write_higher, "D"),
-    rotate_left_trough_carry!(0x13, reg_de, read_lower, write_lower, "E"),
-    rotate_left_trough_carry!(0x14, reg_hl, read_higher, write_higher, "H"),
-    rotate_left_trough_carry!(0x15, reg_hl, read_lower, write_lower, "L"),
+    rotate_left_trough_carry!(0x10, reg_bc, read_higher, write_higher, "B", regular),
+    rotate_left_trough_carry!(0x11, reg_bc, read_lower, write_lower, "C", regular),
+    rotate_left_trough_carry!(0x12, reg_de, read_higher, write_higher, "D", regular),
+    rotate_left_trough_carry!(0x13, reg_de, read_lower, write_lower, "E", regular),
+    rotate_left_trough_carry!(0x14, reg_hl, read_higher, write_higher, "H", regular),
+    rotate_left_trough_carry!(0x15, reg_hl, read_lower, write_lower, "L", regular),
 
-    rotate_left_trough_carry!(0x17, reg_af, read_lower, write_lower, "A"),
+    rotate_left_trough_carry!(0x17, reg_af, read_lower, write_lower, "A", regular),
 
 
     Instruction{opcode: 0x7C, mnemonic: "BIT 7,H", description: "Test bit 7 of H",
@@ -754,7 +772,7 @@ mod tests {
     }
 
     #[test]
-    fn rlc_no_carry() {
+    fn rl_c_no_carry() {
         let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xCB, 0x11], vec![]));
         cpu.reg_bc.write_lower(0b01010010);
         cpu.step();
@@ -765,7 +783,7 @@ mod tests {
     }
 
     #[test]
-    fn rlc_to_carry() {
+    fn rl_c_to_carry() {
         let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xCB, 0x11], vec![]));
         cpu.reg_bc.write_lower(0b11010010);
         cpu.step();
@@ -776,7 +794,7 @@ mod tests {
     }
 
     #[test]
-    fn rlc_from_carry() {
+    fn rl_c_from_carry() {
         let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xCB, 0x11], vec![]));
         cpu.reg_bc.write_lower(0);
         cpu.reg_af.flags.insert(Flags::C);
@@ -786,4 +804,39 @@ mod tests {
         assert_eq!(cpu.reg_bc.read_lower(), 1);
         assert_eq!(cpu.reg_af.flags, Flags::empty());
     }
+
+    #[test]
+    fn rla_no_carry() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x17], vec![]));
+        cpu.reg_af.write_higher(0b01010010);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 4);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.reg_af.read_higher(), 0b10100100);
+        assert_eq!(cpu.reg_af.flags, Flags::empty());
+    }
+
+    #[test]
+    fn rla_to_carry() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x17], vec![]));
+        cpu.reg_af.write_higher(0b11010010);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 4);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.reg_af.read_higher(), 0b10100100);
+        assert_eq!(cpu.reg_af.flags, Flags::C);
+    }
+
+    #[test]
+    fn rla_from_carry() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x17], vec![]));
+        cpu.reg_af.write_higher(0);
+        cpu.reg_af.flags.insert(Flags::C);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 4);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.reg_af.read_higher(), 1);
+        assert_eq!(cpu.reg_af.flags, Flags::empty());
+    }
+
 }
