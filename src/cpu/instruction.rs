@@ -19,6 +19,22 @@ macro_rules! push {
     )
 }
 
+macro_rules! pop {
+    ($opcode:literal, $register:ident, $register_name:expr) => (
+        Instruction{
+            opcode: $opcode,
+            mnemonic: concat!("Pop ", $register_name),
+            description: concat!("Pop ", $register_name),
+            length_in_bytes: 1, cycles: "12", flags_changed: "",
+            implementation: |cpu| {
+                let popped_value = cpu.pop_u16_from_stack();
+                cpu.$register.write(popped_value);
+                cpu.cycle_count += 12;
+            }
+        }
+    )
+}
+
 macro_rules! ld_8bit_register_immediate {
     ($opcode:literal, $register:ident, $write_method:ident, $register_name:expr) => (
         Instruction{
@@ -141,7 +157,7 @@ macro_rules! rotate_left_trough_carry {
 }
 
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 81] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 85] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -287,6 +303,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 81] = [
             cpu.reg_af.flags.insert(Flags::Z);
         } },
 
+    pop!(0xC1, reg_bc, "BC"),
     push!(0xC5, reg_bc, "BC"),
 
     Instruction{opcode: 0xCB, mnemonic: "CB", description: "CB prefix",
@@ -302,6 +319,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 81] = [
             cpu.program_counter.write(new_pc);
         } },
 
+    pop!(0xD1, reg_de, "DE"),
     push!(0xD5, reg_de, "DE"),
 
     Instruction{opcode: 0xE0, mnemonic: "LD ($FF00+imm), A", description: "Put A to pointer 0xFF00 + immediate",
@@ -320,7 +338,9 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 81] = [
             cpu.memory.write(address, cpu.reg_af.read_a());
         } },
 
+    pop!(0xE1, reg_hl, "HL"),
     push!(0xE5, reg_hl, "HL"),
+    pop!(0xF1, reg_af, "AF"),
     push!(0xF5, reg_af, "AF"),
 ];
 
@@ -769,6 +789,58 @@ mod tests {
         assert_eq!(cpu.stack_pointer.read(), 0xCFFE);
         assert_eq!(cpu.memory.read(0xCFFF), 0x34);
         assert_eq!(cpu.memory.read(0xCFFE), 0x12);
+    }
+
+    #[test]
+    fn pop_bc() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xC1], vec![]));
+        cpu.stack_pointer.write(0xCFFE);
+        cpu.memory.write(0xCFFF, 0x34);
+        cpu.memory.write(0xCFFE, 0x12);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 12);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.stack_pointer.read(), 0xD000);
+        assert_eq!(cpu.reg_bc.read(), 0x1234);
+    }
+
+    #[test]
+    fn pop_de() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xD1], vec![]));
+        cpu.stack_pointer.write(0xCFFE);
+        cpu.memory.write(0xCFFF, 0x34);
+        cpu.memory.write(0xCFFE, 0x12);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 12);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.stack_pointer.read(), 0xD000);
+        assert_eq!(cpu.reg_de.read(), 0x1234);
+    }
+
+    #[test]
+    fn pop_hl() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xE1], vec![]));
+        cpu.stack_pointer.write(0xCFFE);
+        cpu.memory.write(0xCFFF, 0x34);
+        cpu.memory.write(0xCFFE, 0x12);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 12);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.stack_pointer.read(), 0xD000);
+        assert_eq!(cpu.reg_hl.read(), 0x1234);
+    }
+
+    #[test]
+    fn pop_af() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xF1], vec![]));
+        cpu.stack_pointer.write(0xCFFE);
+        cpu.memory.write(0xCFFF, 0x34);
+        cpu.memory.write(0xCFFE, 0x12);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 12);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.stack_pointer.read(), 0xD000);
+        assert_eq!(cpu.reg_af.read(), 0x1234);
     }
 
     #[test]
