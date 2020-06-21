@@ -35,7 +35,7 @@ macro_rules! pop {
     )
 }
 
-macro_rules! inc {
+macro_rules! inc_u8 {
     ($opcode:literal, $register:ident, $write_method:ident, $read_method:ident, $register_name:expr) => (
         Instruction{
             opcode: $opcode,
@@ -54,7 +54,22 @@ macro_rules! inc {
     )
 }
 
-macro_rules! dec {
+macro_rules! inc_u16 {
+    ($opcode:literal, $register:ident, $register_name:expr) => (
+        Instruction{
+            opcode: $opcode,
+            mnemonic: concat!("INC ", $register_name),
+            description: concat!("Increment ", $register_name),
+            length_in_bytes: 1, cycles: "8", flags_changed: "----",
+            implementation: |cpu| {
+                cpu.$register.overflowing_add(1);
+                cpu.cycle_count += 8;
+            }
+        }
+    )
+}
+
+macro_rules! dec_u8 {
     ($opcode:literal, $register:ident, $write_method:ident, $read_method:ident, $register_name:expr) => (
         Instruction{
             opcode: $opcode,
@@ -68,6 +83,21 @@ macro_rules! dec {
                 cpu.reg_af.flags.set(Flags::Z, target_value == 0);
                 cpu.reg_af.flags.set(Flags::H, target_value & 0x0F == 0x0F);
                 cpu.cycle_count += 4;
+            }
+        }
+    )
+}
+
+macro_rules! dec_u16 {
+    ($opcode:literal, $register:ident, $register_name:expr) => (
+        Instruction{
+            opcode: $opcode,
+            mnemonic: concat!("DEC ", $register_name),
+            description: concat!("Decrement ", $register_name),
+            length_in_bytes: 1, cycles: "8", flags_changed: "----",
+            implementation: |cpu| {
+                cpu.$register.overflowing_add(0xFFFF);
+                cpu.cycle_count += 8;
             }
         }
     )
@@ -226,7 +256,7 @@ macro_rules! rotate_left_trough_carry {
 }
 
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 105] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 112] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -234,29 +264,28 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 105] = [
         length_in_bytes: 3, cycles: "12", flags_changed: "",
         implementation: |cpu| panic!("Not implemented") },
     ld_pointer_register!(0x02, reg_bc, "BC", reg_af, read_higher, "A"),
-    Instruction{opcode: 0x03, mnemonic: "INC BC", description: "Increment BC",
-        length_in_bytes: 1, cycles: "8", flags_changed: "",
-        implementation: |cpu| panic!("Not implemented") },
-    inc!(0x04, reg_bc, write_higher, read_higher, "B"),
-    dec!(0x05, reg_bc, write_higher, read_higher, "B"),
+    inc_u16!(0x03, reg_bc, "BC"),
+    inc_u8!(0x04, reg_bc, write_higher, read_higher, "B"),
+    dec_u8!(0x05, reg_bc, write_higher, read_higher, "B"),
 
     ld_8bit_register_immediate!(0x06, reg_bc, write_higher, "B"),
 
     ld_register_pointer!(0x0A, reg_af, write_a, "A", reg_bc, "BC"),
-
-    inc!(0x0C, reg_bc, write_lower, read_lower, "C"),
-    dec!(0x0D, reg_bc, write_lower, read_lower, "C"),
-
+    dec_u16!(0x0B, reg_bc, "BC"),
+    inc_u8!(0x0C, reg_bc, write_lower, read_lower, "C"),
+    dec_u8!(0x0D, reg_bc, write_lower, read_lower, "C"),
     ld_8bit_register_immediate!(0x0E, reg_bc, write_lower, "C"),
     ld_16bit_register_immediate!(0x11, reg_de, "DE"),
     ld_pointer_register!(0x12, reg_de, "DE", reg_af, read_higher, "A"),
-    inc!(0x14, reg_de, write_higher, read_higher, "D"),
-    dec!(0x15, reg_de, write_higher, read_higher, "D"),
+    inc_u16!(0x13, reg_de, "DE"),
+    inc_u8!(0x14, reg_de, write_higher, read_higher, "D"),
+    dec_u8!(0x15, reg_de, write_higher, read_higher, "D"),
     ld_8bit_register_immediate!(0x16, reg_de, write_higher, "D"),
     rotate_left_trough_carry!(0x17, reg_af, read_higher, write_higher, "A", fast),
     ld_register_pointer!(0x1A, reg_af, write_a, "A", reg_de, "DE"),
-    inc!(0x1C, reg_de, write_lower, read_lower, "E"),
-    dec!(0x1D, reg_de, write_lower, read_lower, "E"),
+    dec_u16!(0x1B, reg_de, "DE"),
+    inc_u8!(0x1C, reg_de, write_lower, read_lower, "E"),
+    dec_u8!(0x1D, reg_de, write_lower, read_lower, "E"),
     ld_8bit_register_immediate!(0x1E, reg_de, write_lower, "E"),
 
     Instruction{opcode: 0x20, mnemonic: "JR NZ,r8", description: "Jump relative if not zero",
@@ -273,13 +302,15 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 105] = [
 
     ld_16bit_register_immediate!(0x21, reg_hl, "HL"),
     ld_pointer_register!(0x22, reg_hl, "HL", reg_af, read_higher, "A", 0x0001, "+"),
-    inc!(0x24, reg_hl, write_higher, read_higher, "H"),
-    dec!(0x25, reg_hl, write_higher, read_higher, "H"),
+    inc_u16!(0x23, reg_hl, "HL"),
+    inc_u8!(0x24, reg_hl, write_higher, read_higher, "H"),
+    dec_u8!(0x25, reg_hl, write_higher, read_higher, "H"),
     ld_8bit_register_immediate!(0x26, reg_hl, write_higher, "H"),
 
     ld_register_pointer!(0x2A, reg_af, write_a, "A", reg_hl, "HL", 0x0001, "+"),
-    inc!(0x2C, reg_hl, write_lower, read_lower, "L"),
-    dec!(0x2D, reg_hl, write_lower, read_lower, "L"),
+    dec_u16!(0x2B, reg_hl, "HL"),
+    inc_u8!(0x2C, reg_hl, write_lower, read_lower, "L"),
+    dec_u8!(0x2D, reg_hl, write_lower, read_lower, "L"),
     ld_8bit_register_immediate!(0x2E, reg_hl, write_lower, "L"),
 
     Instruction{opcode: 0x31, mnemonic: "LD SP,d16", description: "Load immediate to SP",
@@ -291,11 +322,12 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 105] = [
         } },
 
     ld_pointer_register!(0x32, reg_hl, "HL", reg_af, read_higher, "A", 0xFFFF, "-"),
+    inc_u16!(0x33, stack_pointer, "SP"),
 
     ld_register_pointer!(0x3A, reg_af, write_a, "A", reg_hl, "HL", 0xFFFF, "-"),
-
-    inc!(0x3C, reg_af, write_higher, read_higher, "A"),
-    dec!(0x3D, reg_af, write_higher, read_higher, "A"),
+    dec_u16!(0x3B, stack_pointer, "SP"),
+    inc_u8!(0x3C, reg_af, write_higher, read_higher, "A"),
+    dec_u8!(0x3D, reg_af, write_higher, read_higher, "A"),
 
     ld_8bit_register_immediate!(0x3E, reg_af, write_higher, "A"),
 
@@ -629,6 +661,78 @@ mod tests {
         assert!(!cpu.reg_af.flags.contains(Flags::Z));
         assert!(cpu.reg_af.flags.contains(Flags::N));
         assert!(!cpu.reg_af.flags.contains(Flags::H));
+    }
+
+    #[test]
+    fn inc_bc() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x03], vec![]));
+        cpu.reg_bc.write(0x4F4F);
+        cpu.step();
+        assert_eq!(cpu.reg_bc.read(), 0x4F50);
+    }
+
+    #[test]
+    fn inc_de() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x13], vec![]));
+        cpu.reg_de.write(0x4F4F);
+        cpu.step();
+        assert_eq!(cpu.reg_de.read(), 0x4F50);
+    }
+
+    #[test]
+    fn inc_hl() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x23], vec![]));
+        cpu.reg_hl.write(0x4F4F);
+        cpu.step();
+        assert_eq!(cpu.reg_hl.read(), 0x4F50);
+    }
+
+    #[test]
+    fn inc_sp() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x33], vec![]));
+        cpu.stack_pointer.write(0x4F4F);
+        cpu.step();
+        assert_eq!(cpu.stack_pointer.read(), 0x4F50);
+    }
+
+    #[test]
+    fn dec_bc() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x0B], vec![]));
+        cpu.reg_bc.write(0x4F4F);
+        cpu.step();
+        assert_eq!(cpu.reg_bc.read(), 0x4F4E);
+    }
+
+    #[test]
+    fn dec_de() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x1B], vec![]));
+        cpu.reg_de.write(0x4F4F);
+        cpu.step();
+        assert_eq!(cpu.reg_de.read(), 0x4F4E);
+    }
+
+    #[test]
+    fn dec_hl() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x2B], vec![]));
+        cpu.reg_hl.write(0x4F4F);
+        cpu.step();
+        assert_eq!(cpu.reg_hl.read(), 0x4F4E);
+    }
+
+    #[test]
+    fn dec_sp() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x3B], vec![]));
+        cpu.stack_pointer.write(0x4F4F);
+        cpu.step();
+        assert_eq!(cpu.stack_pointer.read(), 0x4F4E);
     }
 
     #[test]
