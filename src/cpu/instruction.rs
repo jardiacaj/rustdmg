@@ -256,7 +256,7 @@ macro_rules! rotate_left_trough_carry {
 }
 
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 113] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 121] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -392,6 +392,15 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 113] = [
     ld_pointer_register!(0x74, reg_hl, "HL", reg_hl, read_higher, "H"),
     ld_pointer_register!(0x75, reg_hl, "HL", reg_hl, read_lower, "L"),
     ld_pointer_register!(0x77, reg_hl, "HL", reg_af, read_higher, "A"),
+
+    ld_8bit_register_register!(0x78, reg_af, write_a, "A",  reg_bc, read_higher, "B"),
+    ld_8bit_register_register!(0x79, reg_af, write_a, "A",  reg_bc, read_lower, "C"),
+    ld_8bit_register_register!(0x7A, reg_af, write_a, "A",  reg_de, read_higher, "D"),
+    ld_8bit_register_register!(0x7B, reg_af, write_a, "A",  reg_de, read_lower, "E"),
+    ld_8bit_register_register!(0x7C, reg_af, write_a, "A",  reg_hl, read_higher, "H"),
+    ld_8bit_register_register!(0x7D, reg_af, write_a, "A",  reg_hl, read_lower, "L"),
+    ld_register_pointer!(0x7E, reg_af, write_a, "A", reg_hl, "HL"),
+    ld_8bit_register_register!(0x7F, reg_af, write_a, "A",  reg_af, read_higher, "A"),
 
     Instruction{opcode: 0xAF, mnemonic: "XOR A", description: "XOR A with A (zeroes A)",
         length_in_bytes: 1, cycles: "4", flags_changed: "Z000",
