@@ -256,7 +256,7 @@ macro_rules! rotate_left_trough_carry {
 }
 
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 112] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 113] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -403,6 +403,14 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 112] = [
 
     pop!(0xC1, reg_bc, "BC"),
     push!(0xC5, reg_bc, "BC"),
+
+    Instruction{opcode: 0xC9, mnemonic: "RET", description: "Return",
+        length_in_bytes: 1, cycles: "16", flags_changed: "",
+        implementation: |cpu| {
+            cpu.cycle_count += 16;
+            let new_pc = cpu.pop_u16_from_stack();
+            cpu.program_counter.write(new_pc);
+        } },
 
     Instruction{opcode: 0xCB, mnemonic: "CB", description: "CB prefix",
         length_in_bytes: 0, cycles: "0", flags_changed: "",
@@ -1040,6 +1048,17 @@ mod tests {
         assert_eq!(cpu.stack_pointer.read(), 0xCFFE);
         assert_eq!(cpu.memory.read(0xCFFF), 0x03);
         assert_eq!(cpu.memory.read(0xCFFE), 0x00);
+    }
+
+    #[test]
+    fn ret() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xC9], vec![]));
+        cpu.stack_pointer.write(0xD000);
+        cpu.push_u16_to_stack(0x1234);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 16);
+        assert_eq!(cpu.program_counter.read(), 0x1234);
+        assert_eq!(cpu.stack_pointer.read(), 0xD000);
     }
 
     #[test]
