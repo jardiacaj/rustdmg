@@ -154,6 +154,37 @@ macro_rules! ld_register_pointer {
     )
 }
 
+macro_rules! ld_pointer_register {
+    ($opcode: literal,
+     $pointer:ident, $pointer_name:expr,
+     $register:ident, $read_method:ident, $register_name:expr) => (
+        Instruction{opcode: $opcode,
+            mnemonic: concat!("LD (", $pointer_name, ") ", $register_name),
+            description: concat!("Put ", $register_name, " in pointer ", $pointer_name),
+            length_in_bytes: 1, cycles: "8", flags_changed: "",
+            implementation: |cpu| {
+                cpu.cycle_count += 8;
+                cpu.memory.write(cpu.$pointer.read(), cpu.$register.$read_method());
+            }
+        }
+    );
+    ($opcode: literal,
+     $pointer:ident, $pointer_name:expr,
+     $register:ident, $read_method:ident, $register_name:expr,
+     $pointer_addition: literal, $pointer_addition_symbol:expr) => (
+        Instruction{opcode: $opcode,
+            mnemonic: concat!("LD (", $pointer_name, $pointer_addition_symbol, ") ", $register_name),
+            description: concat!("Put ", $register_name, " in pointer ", $pointer_name, " and ", $pointer_addition_symbol),
+            length_in_bytes: 1, cycles: "8", flags_changed: "",
+            implementation: |cpu| {
+                cpu.cycle_count += 8;
+                cpu.memory.write(cpu.$pointer.read(), cpu.$register.$read_method());
+                cpu.$pointer.overflowing_add($pointer_addition);
+            }
+        }
+    )
+}
+
 
 macro_rules! rotate_left_trough_carry {
     ($opcode: literal,
@@ -195,16 +226,14 @@ macro_rules! rotate_left_trough_carry {
 }
 
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 97] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 105] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
     Instruction{opcode: 0x01, mnemonic: "LD BC,d16", description: "Load immediate to BC",
         length_in_bytes: 3, cycles: "12", flags_changed: "",
         implementation: |cpu| panic!("Not implemented") },
-    Instruction{opcode: 0x02, mnemonic: "LD (BC),A", description: "Put A to pointer BC",
-        length_in_bytes: 1, cycles: "8", flags_changed: "",
-        implementation: |cpu| panic!("Not implemented") },
+    ld_pointer_register!(0x02, reg_bc, "BC", reg_af, read_higher, "A"),
     Instruction{opcode: 0x03, mnemonic: "INC BC", description: "Increment BC",
         length_in_bytes: 1, cycles: "8", flags_changed: "",
         implementation: |cpu| panic!("Not implemented") },
@@ -220,6 +249,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 97] = [
 
     ld_8bit_register_immediate!(0x0E, reg_bc, write_lower, "C"),
     ld_16bit_register_immediate!(0x11, reg_de, "DE"),
+    ld_pointer_register!(0x12, reg_de, "DE", reg_af, read_higher, "A"),
     inc!(0x14, reg_de, write_higher, read_higher, "D"),
     dec!(0x15, reg_de, write_higher, read_higher, "D"),
     ld_8bit_register_immediate!(0x16, reg_de, write_higher, "D"),
@@ -242,6 +272,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 97] = [
         } },
 
     ld_16bit_register_immediate!(0x21, reg_hl, "HL"),
+    ld_pointer_register!(0x22, reg_hl, "HL", reg_af, read_higher, "A", 0x0001, "+"),
     inc!(0x24, reg_hl, write_higher, read_higher, "H"),
     dec!(0x25, reg_hl, write_higher, read_higher, "H"),
     ld_8bit_register_immediate!(0x26, reg_hl, write_higher, "H"),
@@ -259,13 +290,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 97] = [
             cpu.stack_pointer.write(immediate);
         } },
 
-    Instruction{opcode: 0x32, mnemonic: "LD (HL-),A", description: "Put A to pointer HL and decrement HL",
-        length_in_bytes: 1, cycles: "8", flags_changed: "",
-        implementation: |cpu| {
-            cpu.cycle_count += 8;
-            cpu.memory.write(cpu.reg_hl.read(), cpu.reg_af.read_a());
-            cpu.reg_hl.overflowing_add(0xFFFF);
-        } },
+    ld_pointer_register!(0x32, reg_hl, "HL", reg_af, read_higher, "A", 0xFFFF, "-"),
 
     ld_register_pointer!(0x3A, reg_af, write_a, "A", reg_hl, "HL", 0xFFFF, "-"),
 
@@ -328,12 +353,13 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 97] = [
     ld_register_pointer!(0x6E, reg_hl, write_lower, "L", reg_hl, "HL"),
     ld_8bit_register_register!(0x6F, reg_hl, write_lower, "L",  reg_af, read_higher, "A"),
 
-    Instruction{opcode: 0x77, mnemonic: "LD (HL),A", description: "Put A to pointer HL",
-        length_in_bytes: 1, cycles: "8", flags_changed: "",
-        implementation: |cpu| {
-            cpu.cycle_count += 8;
-            cpu.memory.write(cpu.reg_hl.read(), cpu.reg_af.read_a());
-        } },
+    ld_pointer_register!(0x70, reg_hl, "HL", reg_bc, read_higher, "B"),
+    ld_pointer_register!(0x71, reg_hl, "HL", reg_bc, read_lower, "C"),
+    ld_pointer_register!(0x72, reg_hl, "HL", reg_de, read_higher, "D"),
+    ld_pointer_register!(0x73, reg_hl, "HL", reg_de, read_lower, "E"),
+    ld_pointer_register!(0x74, reg_hl, "HL", reg_hl, read_higher, "H"),
+    ld_pointer_register!(0x75, reg_hl, "HL", reg_hl, read_lower, "L"),
+    ld_pointer_register!(0x77, reg_hl, "HL", reg_af, read_higher, "A"),
 
     Instruction{opcode: 0xAF, mnemonic: "XOR A", description: "XOR A with A (zeroes A)",
         length_in_bytes: 1, cycles: "4", flags_changed: "Z000",
@@ -641,10 +667,99 @@ mod tests {
     }
 
     #[test]
+    fn ld_pointer_hl_a_and_increment() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x22], vec![]));
+        cpu.reg_af.write_a(0xF0);
+        cpu.reg_hl.write(0xC123);
+        cpu.step();
+        assert_eq!(cpu.memory.read(0xC123), 0xF0);
+        assert_eq!(cpu.reg_hl.read(), 0xC124);
+    }
+
+    #[test]
+    fn ld_pointer_bc_a() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x02], vec![]));
+        cpu.reg_af.write_a(0xF0);
+        cpu.reg_bc.write(0xC123);
+        cpu.step();
+        assert_eq!(cpu.memory.read(0xC123), 0xF0);
+    }
+
+    #[test]
+    fn ld_pointer_de_a() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x12], vec![]));
+        cpu.reg_af.write_a(0xF0);
+        cpu.reg_de.write(0xC123);
+        cpu.step();
+        assert_eq!(cpu.memory.read(0xC123), 0xF0);
+    }
+
+    #[test]
+    fn ld_pointer_hl_b() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x70], vec![]));
+        cpu.reg_bc.write_higher(0xF0);
+        cpu.reg_hl.write(0xC123);
+        cpu.step();
+        assert_eq!(cpu.memory.read(0xC123), 0xF0);
+    }
+
+    #[test]
+    fn ld_pointer_hl_c() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x71], vec![]));
+        cpu.reg_bc.write_lower(0xF0);
+        cpu.reg_hl.write(0xC123);
+        cpu.step();
+        assert_eq!(cpu.memory.read(0xC123), 0xF0);
+    }
+
+    #[test]
+    fn ld_pointer_hl_d() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x72], vec![]));
+        cpu.reg_de.write_higher(0xF0);
+        cpu.reg_hl.write(0xC123);
+        cpu.step();
+        assert_eq!(cpu.memory.read(0xC123), 0xF0);
+    }
+
+    #[test]
+    fn ld_pointer_hl_e() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x73], vec![]));
+        cpu.reg_de.write_lower(0xF0);
+        cpu.reg_hl.write(0xC123);
+        cpu.step();
+        assert_eq!(cpu.memory.read(0xC123), 0xF0);
+    }
+
+    #[test]
+    fn ld_pointer_hl_h() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x74], vec![]));
+        cpu.reg_hl.write(0xC123);
+        cpu.step();
+        assert_eq!(cpu.memory.read(0xC123), 0xC1);
+    }
+
+    #[test]
+    fn ld_pointer_hl_l() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0x75], vec![]));
+        cpu.reg_hl.write(0xC123);
+        cpu.step();
+        assert_eq!(cpu.memory.read(0xC123), 0x23);
+    }
+
+    #[test]
     fn ld_pointer_hl_a() {
         let mut cpu = CPU::new(
             MemoryManager::new_from_vecs(vec![0x77], vec![]));
-        cpu.reg_af.write_a(0xF0);
+        cpu.reg_af.write_higher(0xF0);
         cpu.reg_hl.write(0xC123);
         cpu.step();
         assert_eq!(cpu.memory.read(0xC123), 0xF0);
