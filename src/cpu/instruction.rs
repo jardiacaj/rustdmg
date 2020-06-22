@@ -255,8 +255,39 @@ macro_rules! rotate_left_trough_carry {
     )
 }
 
+macro_rules! jump_relative {
+    ($opcode: literal, $flag:expr, $true_or_false:literal, $condition_text:literal) => (
+        Instruction{opcode: $opcode,
+            mnemonic: concat!("JR ", $condition_text, ", r8"),
+            description: concat!("Jump relative if ", $condition_text),
+            length_in_bytes: 2, cycles: "12/8", flags_changed: "----",
+            implementation: |cpu| {
+                let jump_distance = cpu.pop_u8_from_pc() as i8;
+                if cpu.reg_af.flags.contains($flag) == $true_or_false {
+                    cpu.cycle_count += 12;
+                    cpu.program_counter.overflowing_add(i16::from(jump_distance) as u16);
+                } else {
+                    cpu.cycle_count += 8;
+                }
+            }
+        }
+    );
+    ($opcode: literal) => (
+        Instruction{opcode: $opcode,
+            mnemonic: concat!("JR r8"),
+            description: concat!("Jump relative"),
+            length_in_bytes: 2, cycles: "12", flags_changed: "----",
+            implementation: |cpu| {
+                let jump_distance = cpu.pop_u8_from_pc() as i8;
+                cpu.cycle_count += 12;
+                cpu.program_counter.overflowing_add(i16::from(jump_distance) as u16);
+            }
+        }
+    )
+}
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 123] = [
+
+pub const INSTRUCTIONS_NOCB: [Instruction; 124] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -282,23 +313,14 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 123] = [
     dec_u8!(0x15, reg_de, write_higher, read_higher, "D"),
     ld_8bit_register_immediate!(0x16, reg_de, write_higher, "D"),
     rotate_left_trough_carry!(0x17, reg_af, read_higher, write_higher, "A", fast),
+    jump_relative!(0x18),
     ld_register_pointer!(0x1A, reg_af, write_a, "A", reg_de, "DE"),
     dec_u16!(0x1B, reg_de, "DE"),
     inc_u8!(0x1C, reg_de, write_lower, read_lower, "E"),
     dec_u8!(0x1D, reg_de, write_lower, read_lower, "E"),
     ld_8bit_register_immediate!(0x1E, reg_de, write_lower, "E"),
 
-    Instruction{opcode: 0x20, mnemonic: "JR NZ,r8", description: "Jump relative if not zero",
-        length_in_bytes: 2, cycles: "8 or 12", flags_changed: "",
-        implementation: |cpu| {
-            let jump_distance = ((cpu.pop_u8_from_pc() as i8) as u16);
-            if cpu.reg_af.flags.contains(Flags::Z) {
-                cpu.cycle_count += 8;
-            } else {
-                cpu.cycle_count += 12;
-                cpu.program_counter.overflowing_add(jump_distance);
-            }
-        } },
+    jump_relative!(0x20, Flags::Z, false, "NZ"),
 
     ld_16bit_register_immediate!(0x21, reg_hl, "HL"),
     ld_pointer_register!(0x22, reg_hl, "HL", reg_af, read_higher, "A", 0x0001, "+"),
@@ -1051,7 +1073,15 @@ mod tests {
     }
 
     #[test]
-    fn jnz_no_jump() {
+    fn jr() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x18, 0x33], vec![]));
+        cpu.step();
+        assert_eq!(cpu.program_counter.read(), 0x35);
+        assert_eq!(cpu.cycle_count, 12);
+    }
+
+    #[test]
+    fn jrnz_no_jump() {
         let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x20, 0x33], vec![]));
         cpu.reg_af.flags.insert(Flags::Z);
         cpu.step();
@@ -1060,7 +1090,7 @@ mod tests {
     }
 
     #[test]
-    fn jnz_jump_positive() {
+    fn jrnz_jump_positive() {
         let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x20, 0x33], vec![]));
         cpu.reg_af.flags.remove(Flags::Z);
         cpu.step();
@@ -1069,7 +1099,7 @@ mod tests {
     }
 
     #[test]
-    fn jnz_jump_negative() {
+    fn jrnz_jump_negative() {
         // Jump -3
         let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x20, 0xFD], vec![]));
         cpu.reg_af.flags.remove(Flags::Z);
