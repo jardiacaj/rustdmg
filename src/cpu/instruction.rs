@@ -287,7 +287,7 @@ macro_rules! jump_relative {
 }
 
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 124] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 127] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -329,11 +329,15 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 124] = [
     dec_u8!(0x25, reg_hl, write_higher, read_higher, "H"),
     ld_8bit_register_immediate!(0x26, reg_hl, write_higher, "H"),
 
+    jump_relative!(0x28, Flags::Z, true, "Z"),
+
     ld_register_pointer!(0x2A, reg_af, write_a, "A", reg_hl, "HL", 0x0001, "+"),
     dec_u16!(0x2B, reg_hl, "HL"),
     inc_u8!(0x2C, reg_hl, write_lower, read_lower, "L"),
     dec_u8!(0x2D, reg_hl, write_lower, read_lower, "L"),
     ld_8bit_register_immediate!(0x2E, reg_hl, write_lower, "L"),
+
+    jump_relative!(0x30, Flags::C, false, "NC"),
 
     Instruction{opcode: 0x31, mnemonic: "LD SP,d16", description: "Load immediate to SP",
         length_in_bytes: 3, cycles: "12", flags_changed: "",
@@ -345,6 +349,8 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 124] = [
 
     ld_pointer_register!(0x32, reg_hl, "HL", reg_af, read_higher, "A", 0xFFFF, "-"),
     inc_u16!(0x33, stack_pointer, "SP"),
+
+    jump_relative!(0x38, Flags::C, true, "C"),
 
     ld_register_pointer!(0x3A, reg_af, write_a, "A", reg_hl, "HL", 0xFFFF, "-"),
     dec_u16!(0x3B, stack_pointer, "SP"),
@@ -1105,6 +1111,60 @@ mod tests {
         cpu.reg_af.flags.remove(Flags::Z);
         cpu.step();
         assert_eq!(cpu.program_counter.read(), 0xFFFF);
+        assert_eq!(cpu.cycle_count, 12);
+    }
+
+    #[test]
+    fn jrz_no_jump() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x28, 0x33], vec![]));
+        cpu.reg_af.flags.remove(Flags::Z);
+        cpu.step();
+        assert_eq!(cpu.program_counter.read(), 0x02);
+        assert_eq!(cpu.cycle_count, 8);
+    }
+
+    #[test]
+    fn jrz_jump_positive() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x28, 0x33], vec![]));
+        cpu.reg_af.flags.insert(Flags::Z);
+        cpu.step();
+        assert_eq!(cpu.program_counter.read(), 0x35);
+        assert_eq!(cpu.cycle_count, 12);
+    }
+
+    #[test]
+    fn jrnc_no_jump() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x30, 0x33], vec![]));
+        cpu.reg_af.flags.insert(Flags::C);
+        cpu.step();
+        assert_eq!(cpu.program_counter.read(), 0x02);
+        assert_eq!(cpu.cycle_count, 8);
+    }
+
+    #[test]
+    fn jrnc_jump_positive() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x30, 0x33], vec![]));
+        cpu.reg_af.flags.remove(Flags::C);
+        cpu.step();
+        assert_eq!(cpu.program_counter.read(), 0x35);
+        assert_eq!(cpu.cycle_count, 12);
+    }
+
+    #[test]
+    fn jrc_no_jump() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x38, 0x33], vec![]));
+        cpu.reg_af.flags.remove(Flags::C);
+        cpu.step();
+        assert_eq!(cpu.program_counter.read(), 0x02);
+        assert_eq!(cpu.cycle_count, 8);
+    }
+
+    #[test]
+    fn jrc_jump_positive() {
+        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x38, 0x33], vec![]));
+        cpu.reg_af.flags.insert(Flags::C);
+        cpu.step();
+        assert_eq!(cpu.program_counter.read(), 0x35);
         assert_eq!(cpu.cycle_count, 12);
     }
 
