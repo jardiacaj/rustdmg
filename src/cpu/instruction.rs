@@ -287,7 +287,7 @@ macro_rules! jump_relative {
 }
 
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 127] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 128] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -473,6 +473,8 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 127] = [
             cpu.memory.write(address, cpu.reg_af.read_a());
         } },
 
+    pop!(0xE1, reg_hl, "HL"),
+
     Instruction{opcode: 0xE2, mnemonic: "LD ($FF00+C), A", description: "Put A to pointer 0xFF00 + C",
         length_in_bytes: 1, cycles: "8", flags_changed: "",
         implementation: |cpu| {
@@ -481,7 +483,6 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 127] = [
             cpu.memory.write(address, cpu.reg_af.read_a());
         } },
 
-    pop!(0xE1, reg_hl, "HL"),
     push!(0xE5, reg_hl, "HL"),
     pop!(0xF1, reg_af, "AF"),
     push!(0xF5, reg_af, "AF"),
@@ -492,6 +493,14 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 127] = [
             cpu.cycle_count += 16;
             let immediate = cpu.pop_u16_from_pc();
             cpu.memory.write(immediate, cpu.reg_af.read_a());
+        } },
+
+    Instruction{opcode: 0xF0, mnemonic: "LD A, ($FF00+imm)", description: "Put pointer 0xFF00 + immediate to A",
+        length_in_bytes: 2, cycles: "12", flags_changed: "",
+        implementation: |cpu| {
+            cpu.cycle_count += 12;
+            let address = 0xFF00 + (cpu.pop_u8_from_pc() as u16);
+            cpu.reg_af.write_a(cpu.memory.read(address));
         } },
 
     Instruction{opcode: 0xFE, mnemonic: "CP d8", description: "Compare A with immediate",
@@ -1045,6 +1054,16 @@ mod tests {
         cpu.step();
         assert_eq!(cpu.cycle_count, 12);
         assert_eq!(cpu.memory.read(0xFF45), 0xF0);
+    }
+
+    #[test]
+    fn ld_a_high_immediate() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0xF0, 0x45], vec![]));
+        cpu.memory.write(0xFF45, 0x12);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 12);
+        assert_eq!(cpu.reg_af.read_a(), 0x12);
     }
 
     #[test]
