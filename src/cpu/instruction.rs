@@ -256,7 +256,7 @@ macro_rules! rotate_left_trough_carry {
 }
 
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 122] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 123] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -457,6 +457,14 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 122] = [
     push!(0xE5, reg_hl, "HL"),
     pop!(0xF1, reg_af, "AF"),
     push!(0xF5, reg_af, "AF"),
+
+    Instruction{opcode: 0xEA, mnemonic: "LD (a16), A", description: "Load A to immediate pointer",
+        length_in_bytes: 3, cycles: "16", flags_changed: "----",
+        implementation: |cpu| {
+            cpu.cycle_count += 16;
+            let immediate = cpu.pop_u16_from_pc();
+            cpu.memory.write(immediate, cpu.reg_af.read_a());
+        } },
 
     Instruction{opcode: 0xFE, mnemonic: "CP d8", description: "Compare A with immediate",
         length_in_bytes: 2, cycles: "8", flags_changed: "Z1HC",
@@ -896,6 +904,17 @@ mod tests {
         cpu.reg_hl.write(0xC123);
         cpu.step();
         assert_eq!(cpu.memory.read(0xC123), 0xF0);
+    }
+
+    #[test]
+    fn ld_pointer_immediate_a() {
+        let mut cpu = CPU::new(
+            MemoryManager::new_from_vecs(vec![0xEA, 0xC0, 0xC1], vec![]));
+        cpu.reg_af.write_higher(0xF0);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 16);
+        assert_eq!(cpu.program_counter.read(), 0x0003);
+        assert_eq!(cpu.memory.read(0xC1C0), 0xF0);
     }
 
     #[test]
