@@ -5,7 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="77534023-f48c-484c-890f-135cfd6c2296" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/src/cpu/instruction.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/cpu/instruction.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/cpu/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/cpu/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/dmg.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dmg.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/memory/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/memory/mod.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -152,6 +156,10 @@
       <screen x="0" y="0" width="3840" height="2160" />
     </state>
     <state x="0" y="18" width="1920" height="2142" key="#com.intellij.execution.junit2.states.ComparisonFailureState$DiffDialog/0.0.3840.2160@0.0.3840.2160" timestamp="1592679416909" />
+    <state x="588" y="875" width="747" height="432" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1592770320711">
+      <screen x="0" y="0" width="3840" height="2160" />
+    </state>
+    <state x="588" y="875" width="747" height="432" key="#com.intellij.fileTypes.FileTypeChooser/0.0.3840.2160@0.0.3840.2160" timestamp="1592770320711" />
     <state width="1852" height="618" key="GridCell.Tab.0.bottom" timestamp="1592686616115">
       <screen x="0" y="0" width="3840" height="2160" />
     </state>
@@ -172,10 +180,18 @@
       <screen x="0" y="0" width="3840" height="2160" />
     </state>
     <state x="539" y="752" width="1579" height="1229" key="SettingsEditor/0.0.3840.2160@0.0.3840.2160" timestamp="1592675350262" />
-    <state x="369" y="182" width="1177" height="1976" key="search.everywhere.popup" timestamp="1592675332431">
+    <state x="2603" y="446" width="557" height="218" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1592855024655">
       <screen x="0" y="0" width="3840" height="2160" />
     </state>
-    <state x="369" y="182" width="1177" height="1976" key="search.everywhere.popup/0.0.3840.2160@0.0.3840.2160" timestamp="1592675332431" />
+    <state x="2603" y="446" width="557" height="218" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/0.0.3840.2160@0.0.3840.2160" timestamp="1592855024655" />
+    <state x="2" y="20" width="830" height="1119" key="find.popup" timestamp="1592856695228">
+      <screen x="0" y="0" width="3840" height="2160" />
+    </state>
+    <state x="2" y="20" width="830" height="1119" key="find.popup/0.0.3840.2160@0.0.3840.2160" timestamp="1592856695228" />
+    <state x="369" y="182" width="1177" height="1976" key="search.everywhere.popup" timestamp="1592825245332">
+      <screen x="0" y="0" width="3840" height="2160" />
+    </state>
+    <state x="369" y="182" width="1177" height="1976" key="search.everywhere.popup/0.0.3840.2160@0.0.3840.2160" timestamp="1592825245332" />
   </component>
   <component name="masterDetails">
     <states>

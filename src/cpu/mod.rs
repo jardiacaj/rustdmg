@@ -89,9 +89,14 @@ impl CPU {
         let instruction_index = CPU::get_instruction_index_from_opcode(opcode);
         let instruction = &INSTRUCTIONS_NOCB[instruction_index];
         let implementation = instruction.implementation;
+        let cycles_before_op = self.cycle_count;
 
         self.print_instruction(instruction, false);
         implementation(self);
+
+        for i in (cycles_before_op..self.cycle_count) {
+            self.memory.cycle();
+        }
     }
 
     fn run_cb_op(&mut self) {

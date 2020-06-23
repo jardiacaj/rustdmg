@@ -5,6 +5,7 @@ use cartridge::Cartridge;
 use cartridge::ROM_BANK_SIZE;
 use bootrom::BootROM;
 use crate::memory::bootrom::BOOT_ROM_SIZE;
+use crate::ppu::PPU;
 
 const HIGH_RAM_BANK_SIZE: u16 = 0x007F;
 const HIGH_RAM_BASE_ADDRESS: u16 = 0xFF80;
@@ -79,6 +80,7 @@ pub struct MemoryManager {
 //            io_ram: MemoryZone,
 //            hi_ram: MemoryZone,
 //            interrupt_enable_register: MemoryZone,
+    ppu: PPU,
 }
 
 impl MemoryManager {
@@ -87,6 +89,10 @@ impl MemoryManager {
     }
     pub fn write(&mut self, address: u16, value: u8) {
         self.get_memory_zone_from_address(address).write(address, value)
+    }
+
+    pub fn cycle(&mut self) {
+        self.ppu.cycle();
     }
 
     fn new_video_ram() -> RAMBank {
@@ -112,7 +118,7 @@ impl MemoryManager {
 
     fn new_io_ports() -> IOPorts { IOPorts{data: vec![0; IO_PORTS_SIZE as usize]} }
 
-    pub fn new(boot_rom: BootROM, cartridge: Cartridge) -> MemoryManager {
+    pub fn new(boot_rom: BootROM, cartridge: Cartridge, ppu: PPU) -> MemoryManager {
         MemoryManager {
             boot_rom_active: true,
             boot_rom,
@@ -121,6 +127,7 @@ impl MemoryManager {
             video_ram: MemoryManager::new_video_ram(),
             io_ports: MemoryManager::new_io_ports(),
             high_ram: MemoryManager::new_high_ram(),
+            ppu,
         }
     }
 
@@ -134,6 +141,7 @@ impl MemoryManager {
             video_ram: MemoryManager::new_video_ram(),
             io_ports: MemoryManager::new_io_ports(),
             high_ram: MemoryManager::new_high_ram(),
+            ppu: PPU::new(),
         }
     }
 
