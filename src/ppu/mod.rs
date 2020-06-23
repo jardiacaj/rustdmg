@@ -17,11 +17,11 @@ fn mode_duration(mode: &PPU_Mode) -> u16 {
         PPU_Mode::VBlank => VBLANK_LINES as u16 * LINE_TOTAL_DURATION,
     }
 }
-fn next_mode(mode: &PPU_Mode, current_line: &u8) -> PPU_Mode {
+fn next_mode(mode: &PPU_Mode, current_line: u8) -> PPU_Mode {
     match mode {
         PPU_Mode::OAM => PPU_Mode::PixelTransfer,
         PPU_Mode::PixelTransfer => PPU_Mode::HBlank,
-        PPU_Mode::HBlank => { if *current_line <= 144 { PPU_Mode::OAM } else { PPU_Mode::VBlank} },
+        PPU_Mode::HBlank => { if current_line < DRAWN_LINES { PPU_Mode::OAM } else { PPU_Mode::VBlank} },
         PPU_Mode::VBlank => PPU_Mode::OAM,
     }
 }
@@ -52,17 +52,17 @@ impl PPU {
 
         let duration = mode_duration(&self.current_mode);
 
-        if duration > 0 && self.cycles_in_current_mode >= duration {
-            self.current_mode = next_mode(&self.current_mode, &self.current_line);
-            self.cycles_in_current_mode = 0;
-        }
-
         if self.cycles_in_current_line == LINE_TOTAL_DURATION {
             self.cycles_in_current_line = 0;
             self.current_line += 1;
-            if self.current_line == DRAWN_LINES + VBLANK_LINES {
+            if self.current_line >= DRAWN_LINES + VBLANK_LINES {
                 self.current_line = 0;
             }
+        }
+
+        if duration > 0 && self.cycles_in_current_mode >= duration {
+            self.current_mode = next_mode(&self.current_mode, self.current_line);
+            self.cycles_in_current_mode = 0;
         }
     }
 }
@@ -82,20 +82,35 @@ mod tests {
     #[test]
     fn mode_timings() {
         let mut ppu = PPU::new();
-        for i in 0..(20 * 4) {
-            assert_eq!(ppu.cycles_in_current_mode, i);
-            assert_eq!(ppu.current_mode, PPU_Mode::OAM);
-            ppu.cycle();
-        }
-        for i in 0..(43 * 4) {
-            assert_eq!(ppu.cycles_in_current_mode, i);
-            assert_eq!(ppu.current_mode, PPU_Mode::PixelTransfer);
-            ppu.cycle();
-        }
-        for i in 0..(51 * 4) {
-            assert_eq!(ppu.cycles_in_current_mode, i);
-            assert_eq!(ppu.current_mode, PPU_Mode::HBlank);
-            ppu.cycle();
+
+        for frame in 0..2 {
+            for line in 0..144 {
+                assert_eq!(ppu.current_line, line);
+                for i in 0..(20 * 4) {
+                    assert_eq!(ppu.cycles_in_current_mode, i);
+                    assert_eq!(ppu.current_mode, PPU_Mode::OAM);
+                    ppu.cycle();
+                }
+                for i in 0..(43 * 4) {
+                    assert_eq!(ppu.cycles_in_current_mode, i);
+                    assert_eq!(ppu.current_mode, PPU_Mode::PixelTransfer);
+                    ppu.cycle();
+                }
+                for i in 0..(51 * 4) {
+                    assert_eq!(ppu.cycles_in_current_mode, i);
+                    assert_eq!(ppu.current_mode, PPU_Mode::HBlank);
+                    ppu.cycle();
+                }
+            }
+            for line_in_vblank in 0..10 as u8 {
+                assert_eq!(ppu.current_line, line_in_vblank + 144);
+                for cycles_per_vblank in 0..((20 + 43 + 51) * 4) {
+                    println!("{} {}", cycles_per_vblank, ppu.current_line);
+                    assert_eq!(ppu.cycles_in_current_mode, cycles_per_vblank + line_in_vblank as u16 * LINE_TOTAL_DURATION);
+                    assert_eq!(ppu.current_mode, PPU_Mode::VBlank);
+                    ppu.cycle();
+                }
+            }
         }
     }
 }
