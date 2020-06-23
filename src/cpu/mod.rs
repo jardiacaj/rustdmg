@@ -1,8 +1,8 @@
 pub mod register;
 pub mod instruction;
 
-use super::memory::MemoryManager;
-use super::memory::MemoryZone;
+use super::bus::Bus;
+use super::bus::MemoryZone;
 use register::*;
 use instruction::*;
 
@@ -14,12 +14,12 @@ pub struct CPU {
     pub reg_hl: Register16bit,
     pub stack_pointer: Register16bit,
     pub program_counter: Register16bit,
-    pub memory: MemoryManager,
+    pub bus: Bus,
     pub cycle_count: u64,
 }
 
 impl CPU {
-    pub fn new(memory: MemoryManager) -> CPU {
+    pub fn new(bus: Bus) -> CPU {
         CPU {
             reg_af: AFRegister::new(),
             reg_bc: Register16bit::new(),
@@ -27,13 +27,13 @@ impl CPU {
             reg_hl: Register16bit::new(),
             stack_pointer: Register16bit::new(),
             program_counter: Register16bit::new(),
-            memory,
+            bus,
             cycle_count: 0,
         }
     }
 
     fn pop_u8_from_pc(&mut self) -> u8 {
-        let result = self.memory.read(self.program_counter.read());
+        let result = self.bus.read(self.program_counter.read());
         self.program_counter.inc();
         result
     }
@@ -47,7 +47,7 @@ impl CPU {
 
     fn push_u8_to_stack(&mut self, value: u8) {
         self.stack_pointer.overflowing_add(0xFFFF);
-        self.memory.write(self.stack_pointer.read(), value);
+        self.bus.write(self.stack_pointer.read(), value);
     }
 
     fn push_u16_to_stack(&mut self, value: u16) {
@@ -56,7 +56,7 @@ impl CPU {
     }
 
     fn pop_u8_from_stack(&mut self) -> u8 {
-        let result = self.memory.read(self.stack_pointer.read());
+        let result = self.bus.read(self.stack_pointer.read());
         self.stack_pointer.overflowing_add(1);
         result
     }
@@ -74,10 +74,10 @@ impl CPU {
 
         print!("  {}", instruction.mnemonic);
         if instruction.length_in_bytes > 1 {
-            print!(" -- {:02X}", self.memory.read(self.program_counter.read() - neg_offset));
+            print!(" -- {:02X}", self.bus.read(self.program_counter.read() - neg_offset));
         }
         if instruction.length_in_bytes > 2 {
-            print!("{:02X}", self.memory.read(self.program_counter.read() - neg_offset + 1));
+            print!("{:02X}", self.bus.read(self.program_counter.read() - neg_offset + 1));
         }
         println!();
     }
@@ -95,7 +95,7 @@ impl CPU {
         implementation(self);
 
         for i in (cycles_before_op..self.cycle_count) {
-            self.memory.cycle();
+            self.bus.cycle();
         }
     }
 

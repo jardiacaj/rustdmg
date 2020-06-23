@@ -1,6 +1,6 @@
-use super::memory::cartridge::Cartridge;
-use super::memory::bootrom::BootROM;
-use super::memory;
+use super::bus::cartridge::Cartridge;
+use super::bus::bootrom::BootROM;
+use super::bus;
 use super::cpu::CPU;
 use std::io;
 use crate::ppu::PPU;
@@ -14,8 +14,8 @@ impl DMG {
         let cartridge = Cartridge::read_cartridge_from_romfile(rom_file_path)?;
         let boot_rom = BootROM::new("DMG_ROM.bin")?;
         let ppu = PPU::new();
-        let memory = memory::MemoryManager::new(boot_rom, cartridge, ppu);
-        let cpu = CPU::new(memory);
+        let bus = bus::Bus::new(boot_rom, cartridge, ppu);
+        let cpu = CPU::new(bus);
         Ok(DMG{cpu})
     }
 

@@ -4,7 +4,7 @@ pub mod bootrom;
 use cartridge::Cartridge;
 use cartridge::ROM_BANK_SIZE;
 use bootrom::BootROM;
-use crate::memory::bootrom::BOOT_ROM_SIZE;
+use crate::bus::bootrom::BOOT_ROM_SIZE;
 use crate::ppu::PPU;
 
 const HIGH_RAM_BANK_SIZE: u16 = 0x007F;
@@ -60,7 +60,7 @@ impl IOPorts {
     fn global_address_to_local_address(&self, address: u16) -> u16 { address - IO_PORTS_BASE_ADDRESS }
 }
 
-pub struct MemoryManager {
+pub struct Bus {
     pub boot_rom_active: bool,
     pub boot_rom: BootROM,
     pub cartridge: cartridge::Cartridge,
@@ -83,7 +83,7 @@ pub struct MemoryManager {
     ppu: PPU,
 }
 
-impl MemoryManager {
+impl Bus {
     pub fn read(&mut self, address: u16) -> u8 {
         self.get_memory_zone_from_address(address).read(address)
     }
@@ -118,29 +118,29 @@ impl MemoryManager {
 
     fn new_io_ports() -> IOPorts { IOPorts{data: vec![0; IO_PORTS_SIZE as usize]} }
 
-    pub fn new(boot_rom: BootROM, cartridge: Cartridge, ppu: PPU) -> MemoryManager {
-        MemoryManager {
+    pub fn new(boot_rom: BootROM, cartridge: Cartridge, ppu: PPU) -> Bus {
+        Bus {
             boot_rom_active: true,
             boot_rom,
             cartridge,
-            work_ram: MemoryManager::new_work_ram(),
-            video_ram: MemoryManager::new_video_ram(),
-            io_ports: MemoryManager::new_io_ports(),
-            high_ram: MemoryManager::new_high_ram(),
+            work_ram: Bus::new_work_ram(),
+            video_ram: Bus::new_video_ram(),
+            io_ports: Bus::new_io_ports(),
+            high_ram: Bus::new_high_ram(),
             ppu,
         }
     }
 
-    pub fn new_from_vecs(boot_rom_data: Vec<u8>, cart_rom_bank_zero_data: Vec<u8>) -> MemoryManager {
+    pub fn new_from_vecs(boot_rom_data: Vec<u8>, cart_rom_bank_zero_data: Vec<u8>) -> Bus {
         let boot_rom = BootROM{data: boot_rom_data};
-        MemoryManager {
+        Bus {
             boot_rom_active: true,
             boot_rom,
             cartridge: Cartridge::new_dummy_cartridge(),
-            work_ram: MemoryManager::new_work_ram(),
-            video_ram: MemoryManager::new_video_ram(),
-            io_ports: MemoryManager::new_io_ports(),
-            high_ram: MemoryManager::new_high_ram(),
+            work_ram: Bus::new_work_ram(),
+            video_ram: Bus::new_video_ram(),
+            io_ports: Bus::new_io_ports(),
+            high_ram: Bus::new_high_ram(),
             ppu: PPU::new(),
         }
     }
@@ -158,7 +158,7 @@ impl MemoryManager {
         if address >= HIGH_RAM_BASE_ADDRESS && address < HIGH_RAM_BASE_ADDRESS + HIGH_RAM_BANK_SIZE {
             return Box::new(&mut self.high_ram);
         }
-        panic!("Invalid memory address {:#02X?}", address);
+        panic!("Invalid bus address {:#02X?}", address);
     }
 }
 
@@ -168,19 +168,19 @@ mod tests {
 
     #[test]
     fn get_boot_rom_zone() {
-        let mut memory = MemoryManager::new_from_vecs(vec![0, 0x55], vec![]);
-        assert_eq!(memory.get_memory_zone_from_address(1).read(1), 0x55);
+        let mut bus = Bus::new_from_vecs(vec![0, 0x55], vec![]);
+        assert_eq!(bus.get_memory_zone_from_address(1).read(1), 0x55);
     }
     #[test]
     fn get_work_ram_zone() {
-        let mut memory = MemoryManager::new_from_vecs(vec![], vec![]);
-        memory.work_ram.data[0x12] = 0xFF;
-        assert_eq!(memory.get_memory_zone_from_address(0xC012).read(0xC012), 0xFF);
+        let mut bus = Bus::new_from_vecs(vec![], vec![]);
+        bus.work_ram.data[0x12] = 0xFF;
+        assert_eq!(bus.get_memory_zone_from_address(0xC012).read(0xC012), 0xFF);
     }
     #[test]
     fn get_video_ram_zone() {
-        let mut memory = MemoryManager::new_from_vecs(vec![], vec![]);
-        memory.video_ram.data[0x12] = 0xFF;
-        assert_eq!(memory.get_memory_zone_from_address(0x8012).read(0x8012), 0xFF);
+        let mut bus = Bus::new_from_vecs(vec![], vec![]);
+        bus.video_ram.data[0x12] = 0xFF;
+        assert_eq!(bus.get_memory_zone_from_address(0x8012).read(0x8012), 0xFF);
     }
 }

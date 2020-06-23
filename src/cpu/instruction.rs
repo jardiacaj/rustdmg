@@ -1,6 +1,6 @@
 use super::CPU;
 use super::Flags;
-use crate::memory::MemoryZone;
+use crate::bus::MemoryZone;
 use crate::cpu::register::DMGRegister;
 use crate::cpu::register::Subregister;
 
@@ -163,7 +163,7 @@ macro_rules! ld_register_pointer {
             length_in_bytes: 1, cycles: "8", flags_changed: "",
             implementation: |cpu| {
                 cpu.cycle_count += 8;
-                cpu.$register.$write_method(cpu.memory.read(cpu.$pointer.read()));
+                cpu.$register.$write_method(cpu.bus.read(cpu.$pointer.read()));
             }
         }
     );
@@ -177,7 +177,7 @@ macro_rules! ld_register_pointer {
             length_in_bytes: 1, cycles: "8", flags_changed: "",
             implementation: |cpu| {
                 cpu.cycle_count += 8;
-                cpu.$register.$write_method(cpu.memory.read(cpu.$pointer.read()));
+                cpu.$register.$write_method(cpu.bus.read(cpu.$pointer.read()));
                 cpu.$pointer.overflowing_add($pointer_addition);
             }
         }
@@ -194,7 +194,7 @@ macro_rules! ld_pointer_register {
             length_in_bytes: 1, cycles: "8", flags_changed: "",
             implementation: |cpu| {
                 cpu.cycle_count += 8;
-                cpu.memory.write(cpu.$pointer.read(), cpu.$register.$read_method());
+                cpu.bus.write(cpu.$pointer.read(), cpu.$register.$read_method());
             }
         }
     );
@@ -208,7 +208,7 @@ macro_rules! ld_pointer_register {
             length_in_bytes: 1, cycles: "8", flags_changed: "",
             implementation: |cpu| {
                 cpu.cycle_count += 8;
-                cpu.memory.write(cpu.$pointer.read(), cpu.$register.$read_method());
+                cpu.bus.write(cpu.$pointer.read(), cpu.$register.$read_method());
                 cpu.$pointer.overflowing_add($pointer_addition);
             }
         }
@@ -470,7 +470,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 128] = [
         implementation: |cpu| {
             cpu.cycle_count += 12;
             let address = 0xFF00 + (cpu.pop_u8_from_pc() as u16);
-            cpu.memory.write(address, cpu.reg_af.read_a());
+            cpu.bus.write(address, cpu.reg_af.read_a());
         } },
 
     pop!(0xE1, reg_hl, "HL"),
@@ -480,7 +480,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 128] = [
         implementation: |cpu| {
             cpu.cycle_count += 8;
             let address = 0xFF00 + (cpu.reg_bc.read_lower() as u16);
-            cpu.memory.write(address, cpu.reg_af.read_a());
+            cpu.bus.write(address, cpu.reg_af.read_a());
         } },
 
     push!(0xE5, reg_hl, "HL"),
@@ -492,7 +492,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 128] = [
         implementation: |cpu| {
             cpu.cycle_count += 16;
             let immediate = cpu.pop_u16_from_pc();
-            cpu.memory.write(immediate, cpu.reg_af.read_a());
+            cpu.bus.write(immediate, cpu.reg_af.read_a());
         } },
 
     Instruction{opcode: 0xF0, mnemonic: "LD A, ($FF00+imm)", description: "Put pointer 0xFF00 + immediate to A",
@@ -500,7 +500,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 128] = [
         implementation: |cpu| {
             cpu.cycle_count += 12;
             let address = 0xFF00 + (cpu.pop_u8_from_pc() as u16);
-            cpu.reg_af.write_a(cpu.memory.read(address));
+            cpu.reg_af.write_a(cpu.bus.read(address));
         } },
 
     Instruction{opcode: 0xFE, mnemonic: "CP d8", description: "Compare A with immediate",
@@ -553,8 +553,8 @@ pub struct Instruction <'a> {
 mod tests {
     use super::CPU;
     use super::Flags;
-    use crate::memory::MemoryManager;
-    use crate::memory::MemoryZone;
+    use crate::bus::Bus;
+    use crate::bus::MemoryZone;
     use crate::cpu::register::DMGRegister;
     use crate::cpu::register::Subregister;
     use bitflags::_core::num::FpCategory::Subnormal;
@@ -562,7 +562,7 @@ mod tests {
     #[test]
     fn xor_a() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0xAF], vec![]));
+            Bus::new_from_vecs(vec![0xAF], vec![]));
         cpu.reg_af.write_a(0x4F);
         cpu.step();
         assert_eq!(cpu.reg_af.read_a(), 0);
@@ -572,7 +572,7 @@ mod tests {
     #[test]
     fn inc_b() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x04], vec![]));
+            Bus::new_from_vecs(vec![0x04], vec![]));
         cpu.reg_bc.write_higher(0x4F);
         cpu.step();
         assert_eq!(cpu.reg_bc.read_higher(), 0x50);
@@ -584,7 +584,7 @@ mod tests {
     #[test]
     fn inc_c() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x0C], vec![]));
+            Bus::new_from_vecs(vec![0x0C], vec![]));
         cpu.reg_bc.write_lower(0x4F);
         cpu.step();
         assert_eq!(cpu.reg_bc.read_lower(), 0x50);
@@ -596,7 +596,7 @@ mod tests {
     #[test]
     fn inc_d() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x14], vec![]));
+            Bus::new_from_vecs(vec![0x14], vec![]));
         cpu.reg_de.write_higher(0x4F);
         cpu.step();
         assert_eq!(cpu.reg_de.read_higher(), 0x50);
@@ -608,7 +608,7 @@ mod tests {
     #[test]
     fn inc_e() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x1C], vec![]));
+            Bus::new_from_vecs(vec![0x1C], vec![]));
         cpu.reg_de.write_lower(0x4F);
         cpu.step();
         assert_eq!(cpu.reg_de.read_lower(), 0x50);
@@ -620,7 +620,7 @@ mod tests {
     #[test]
     fn inc_h() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x24], vec![]));
+            Bus::new_from_vecs(vec![0x24], vec![]));
         cpu.reg_hl.write_higher(0x4F);
         cpu.step();
         assert_eq!(cpu.reg_hl.read_higher(), 0x50);
@@ -632,7 +632,7 @@ mod tests {
     #[test]
     fn inc_l() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x2C], vec![]));
+            Bus::new_from_vecs(vec![0x2C], vec![]));
         cpu.reg_hl.write_lower(0x4F);
         cpu.step();
         assert_eq!(cpu.reg_hl.read_lower(), 0x50);
@@ -644,7 +644,7 @@ mod tests {
     #[test]
     fn inc_a() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x3C], vec![]));
+            Bus::new_from_vecs(vec![0x3C], vec![]));
         cpu.reg_af.write_higher(0x4F);
         cpu.step();
         assert_eq!(cpu.reg_af.read_higher(), 0x50);
@@ -656,7 +656,7 @@ mod tests {
     #[test]
     fn dec_b() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x05], vec![]));
+            Bus::new_from_vecs(vec![0x05], vec![]));
         cpu.reg_bc.write_higher(0x4F);
         cpu.step();
         assert_eq!(cpu.reg_bc.read_higher(), 0x4E);
@@ -668,7 +668,7 @@ mod tests {
     #[test]
     fn dec_c() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x0D], vec![]));
+            Bus::new_from_vecs(vec![0x0D], vec![]));
         cpu.reg_bc.write_lower(0x4F);
         cpu.step();
         assert_eq!(cpu.reg_bc.read_lower(), 0x4E);
@@ -680,7 +680,7 @@ mod tests {
     #[test]
     fn dec_d() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x15], vec![]));
+            Bus::new_from_vecs(vec![0x15], vec![]));
         cpu.reg_de.write_higher(0x4F);
         cpu.step();
         assert_eq!(cpu.reg_de.read_higher(), 0x4E);
@@ -692,7 +692,7 @@ mod tests {
     #[test]
     fn dec_e() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x1D], vec![]));
+            Bus::new_from_vecs(vec![0x1D], vec![]));
         cpu.reg_de.write_lower(0x4F);
         cpu.step();
         assert_eq!(cpu.reg_de.read_lower(), 0x4E);
@@ -704,7 +704,7 @@ mod tests {
     #[test]
     fn dec_h() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x25], vec![]));
+            Bus::new_from_vecs(vec![0x25], vec![]));
         cpu.reg_hl.write_higher(0x4F);
         cpu.step();
         assert_eq!(cpu.reg_hl.read_higher(), 0x4E);
@@ -716,7 +716,7 @@ mod tests {
     #[test]
     fn dec_l() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x2D], vec![]));
+            Bus::new_from_vecs(vec![0x2D], vec![]));
         cpu.reg_hl.write_lower(0x4F);
         cpu.step();
         assert_eq!(cpu.reg_hl.read_lower(), 0x4E);
@@ -728,7 +728,7 @@ mod tests {
     #[test]
     fn dec_a() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x3D], vec![]));
+            Bus::new_from_vecs(vec![0x3D], vec![]));
         cpu.reg_af.write_higher(0x4F);
         cpu.step();
         assert_eq!(cpu.reg_af.read_higher(), 0x4E);
@@ -740,7 +740,7 @@ mod tests {
     #[test]
     fn inc_bc() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x03], vec![]));
+            Bus::new_from_vecs(vec![0x03], vec![]));
         cpu.reg_bc.write(0x4F4F);
         cpu.step();
         assert_eq!(cpu.reg_bc.read(), 0x4F50);
@@ -749,7 +749,7 @@ mod tests {
     #[test]
     fn inc_de() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x13], vec![]));
+            Bus::new_from_vecs(vec![0x13], vec![]));
         cpu.reg_de.write(0x4F4F);
         cpu.step();
         assert_eq!(cpu.reg_de.read(), 0x4F50);
@@ -758,7 +758,7 @@ mod tests {
     #[test]
     fn inc_hl() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x23], vec![]));
+            Bus::new_from_vecs(vec![0x23], vec![]));
         cpu.reg_hl.write(0x4F4F);
         cpu.step();
         assert_eq!(cpu.reg_hl.read(), 0x4F50);
@@ -767,7 +767,7 @@ mod tests {
     #[test]
     fn inc_sp() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x33], vec![]));
+            Bus::new_from_vecs(vec![0x33], vec![]));
         cpu.stack_pointer.write(0x4F4F);
         cpu.step();
         assert_eq!(cpu.stack_pointer.read(), 0x4F50);
@@ -776,7 +776,7 @@ mod tests {
     #[test]
     fn dec_bc() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x0B], vec![]));
+            Bus::new_from_vecs(vec![0x0B], vec![]));
         cpu.reg_bc.write(0x4F4F);
         cpu.step();
         assert_eq!(cpu.reg_bc.read(), 0x4F4E);
@@ -785,7 +785,7 @@ mod tests {
     #[test]
     fn dec_de() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x1B], vec![]));
+            Bus::new_from_vecs(vec![0x1B], vec![]));
         cpu.reg_de.write(0x4F4F);
         cpu.step();
         assert_eq!(cpu.reg_de.read(), 0x4F4E);
@@ -794,7 +794,7 @@ mod tests {
     #[test]
     fn dec_hl() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x2B], vec![]));
+            Bus::new_from_vecs(vec![0x2B], vec![]));
         cpu.reg_hl.write(0x4F4F);
         cpu.step();
         assert_eq!(cpu.reg_hl.read(), 0x4F4E);
@@ -803,7 +803,7 @@ mod tests {
     #[test]
     fn dec_sp() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x3B], vec![]));
+            Bus::new_from_vecs(vec![0x3B], vec![]));
         cpu.stack_pointer.write(0x4F4F);
         cpu.step();
         assert_eq!(cpu.stack_pointer.read(), 0x4F4E);
@@ -812,7 +812,7 @@ mod tests {
     #[test]
     fn ld_de_d16() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x11, 0x34, 0x12], vec![]));
+            Bus::new_from_vecs(vec![0x11, 0x34, 0x12], vec![]));
         cpu.step();
         assert_eq!(cpu.reg_de.read(), 0x1234);
     }
@@ -820,7 +820,7 @@ mod tests {
     #[test]
     fn ld_hl_d16() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x21, 0x34, 0x12], vec![]));
+            Bus::new_from_vecs(vec![0x21, 0x34, 0x12], vec![]));
         cpu.step();
         assert_eq!(cpu.reg_hl.read(), 0x1234);
     }
@@ -828,7 +828,7 @@ mod tests {
     #[test]
     fn ld_sp_d16() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x31, 0x34, 0x12], vec![]));
+            Bus::new_from_vecs(vec![0x31, 0x34, 0x12], vec![]));
         cpu.step();
         assert_eq!(cpu.stack_pointer.read(), 0x1234);
     }
@@ -836,128 +836,128 @@ mod tests {
     #[test]
     fn ld_pointer_hl_a_and_decrement() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x32], vec![]));
+            Bus::new_from_vecs(vec![0x32], vec![]));
         cpu.reg_af.write_a(0xF0);
         cpu.reg_hl.write(0xC123);
         cpu.step();
-        assert_eq!(cpu.memory.read(0xC123), 0xF0);
+        assert_eq!(cpu.bus.read(0xC123), 0xF0);
         assert_eq!(cpu.reg_hl.read(), 0xC122);
     }
 
     #[test]
     fn ld_pointer_hl_a_and_increment() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x22], vec![]));
+            Bus::new_from_vecs(vec![0x22], vec![]));
         cpu.reg_af.write_a(0xF0);
         cpu.reg_hl.write(0xC123);
         cpu.step();
-        assert_eq!(cpu.memory.read(0xC123), 0xF0);
+        assert_eq!(cpu.bus.read(0xC123), 0xF0);
         assert_eq!(cpu.reg_hl.read(), 0xC124);
     }
 
     #[test]
     fn ld_pointer_bc_a() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x02], vec![]));
+            Bus::new_from_vecs(vec![0x02], vec![]));
         cpu.reg_af.write_a(0xF0);
         cpu.reg_bc.write(0xC123);
         cpu.step();
-        assert_eq!(cpu.memory.read(0xC123), 0xF0);
+        assert_eq!(cpu.bus.read(0xC123), 0xF0);
     }
 
     #[test]
     fn ld_pointer_de_a() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x12], vec![]));
+            Bus::new_from_vecs(vec![0x12], vec![]));
         cpu.reg_af.write_a(0xF0);
         cpu.reg_de.write(0xC123);
         cpu.step();
-        assert_eq!(cpu.memory.read(0xC123), 0xF0);
+        assert_eq!(cpu.bus.read(0xC123), 0xF0);
     }
 
     #[test]
     fn ld_pointer_hl_b() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x70], vec![]));
+            Bus::new_from_vecs(vec![0x70], vec![]));
         cpu.reg_bc.write_higher(0xF0);
         cpu.reg_hl.write(0xC123);
         cpu.step();
-        assert_eq!(cpu.memory.read(0xC123), 0xF0);
+        assert_eq!(cpu.bus.read(0xC123), 0xF0);
     }
 
     #[test]
     fn ld_pointer_hl_c() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x71], vec![]));
+            Bus::new_from_vecs(vec![0x71], vec![]));
         cpu.reg_bc.write_lower(0xF0);
         cpu.reg_hl.write(0xC123);
         cpu.step();
-        assert_eq!(cpu.memory.read(0xC123), 0xF0);
+        assert_eq!(cpu.bus.read(0xC123), 0xF0);
     }
 
     #[test]
     fn ld_pointer_hl_d() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x72], vec![]));
+            Bus::new_from_vecs(vec![0x72], vec![]));
         cpu.reg_de.write_higher(0xF0);
         cpu.reg_hl.write(0xC123);
         cpu.step();
-        assert_eq!(cpu.memory.read(0xC123), 0xF0);
+        assert_eq!(cpu.bus.read(0xC123), 0xF0);
     }
 
     #[test]
     fn ld_pointer_hl_e() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x73], vec![]));
+            Bus::new_from_vecs(vec![0x73], vec![]));
         cpu.reg_de.write_lower(0xF0);
         cpu.reg_hl.write(0xC123);
         cpu.step();
-        assert_eq!(cpu.memory.read(0xC123), 0xF0);
+        assert_eq!(cpu.bus.read(0xC123), 0xF0);
     }
 
     #[test]
     fn ld_pointer_hl_h() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x74], vec![]));
+            Bus::new_from_vecs(vec![0x74], vec![]));
         cpu.reg_hl.write(0xC123);
         cpu.step();
-        assert_eq!(cpu.memory.read(0xC123), 0xC1);
+        assert_eq!(cpu.bus.read(0xC123), 0xC1);
     }
 
     #[test]
     fn ld_pointer_hl_l() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x75], vec![]));
+            Bus::new_from_vecs(vec![0x75], vec![]));
         cpu.reg_hl.write(0xC123);
         cpu.step();
-        assert_eq!(cpu.memory.read(0xC123), 0x23);
+        assert_eq!(cpu.bus.read(0xC123), 0x23);
     }
 
     #[test]
     fn ld_pointer_hl_a() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x77], vec![]));
+            Bus::new_from_vecs(vec![0x77], vec![]));
         cpu.reg_af.write_higher(0xF0);
         cpu.reg_hl.write(0xC123);
         cpu.step();
-        assert_eq!(cpu.memory.read(0xC123), 0xF0);
+        assert_eq!(cpu.bus.read(0xC123), 0xF0);
     }
 
     #[test]
     fn ld_pointer_immediate_a() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0xEA, 0xC0, 0xC1], vec![]));
+            Bus::new_from_vecs(vec![0xEA, 0xC0, 0xC1], vec![]));
         cpu.reg_af.write_higher(0xF0);
         cpu.step();
         assert_eq!(cpu.cycle_count, 16);
         assert_eq!(cpu.program_counter.read(), 0x0003);
-        assert_eq!(cpu.memory.read(0xC1C0), 0xF0);
+        assert_eq!(cpu.bus.read(0xC1C0), 0xF0);
     }
 
     #[test]
     fn ld_a_pointer_de() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x1A, 0x55], vec![]));
+            Bus::new_from_vecs(vec![0x1A, 0x55], vec![]));
         cpu.reg_de.write(0x0001);
         cpu.step();
         assert_eq!(cpu.reg_af.read_a(), 0x55);
@@ -966,7 +966,7 @@ mod tests {
     #[test]
     fn ld_a_pointer_bc() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x0A, 0x55], vec![]));
+            Bus::new_from_vecs(vec![0x0A, 0x55], vec![]));
         cpu.reg_bc.write(0x0001);
         cpu.step();
         assert_eq!(cpu.reg_af.read_a(), 0x55);
@@ -975,7 +975,7 @@ mod tests {
     #[test]
     fn ld_a_pointer_hl_increment() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x2A, 0x55], vec![]));
+            Bus::new_from_vecs(vec![0x2A, 0x55], vec![]));
         cpu.reg_hl.write(0x0001);
         cpu.step();
         assert_eq!(cpu.reg_af.read_a(), 0x55);
@@ -985,7 +985,7 @@ mod tests {
     #[test]
     fn ld_a_pointer_hl_decrement() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x3A, 0x55], vec![]));
+            Bus::new_from_vecs(vec![0x3A, 0x55], vec![]));
         cpu.reg_hl.write(0x0001);
         cpu.step();
         assert_eq!(cpu.reg_af.read_a(), 0x55);
@@ -995,7 +995,7 @@ mod tests {
     #[test]
     fn ld_b_pointer_hl() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x46, 0x55], vec![]));
+            Bus::new_from_vecs(vec![0x46, 0x55], vec![]));
         cpu.reg_hl.write(0x0001);
         cpu.step();
         assert_eq!(cpu.reg_bc.read_higher(), 0x55);
@@ -1004,7 +1004,7 @@ mod tests {
     #[test]
     fn ld_c_pointer_hl() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x4E, 0x55], vec![]));
+            Bus::new_from_vecs(vec![0x4E, 0x55], vec![]));
         cpu.reg_hl.write(0x0001);
         cpu.step();
         assert_eq!(cpu.reg_bc.read_lower(), 0x55);
@@ -1013,7 +1013,7 @@ mod tests {
     #[test]
     fn ld_d_pointer_hl() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x56, 0x55], vec![]));
+            Bus::new_from_vecs(vec![0x56, 0x55], vec![]));
         cpu.reg_hl.write(0x0001);
         cpu.step();
         assert_eq!(cpu.reg_de.read_higher(), 0x55);
@@ -1022,7 +1022,7 @@ mod tests {
     #[test]
     fn ld_e_pointer_hl() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x5E, 0x55], vec![]));
+            Bus::new_from_vecs(vec![0x5E, 0x55], vec![]));
         cpu.reg_hl.write(0x0001);
         cpu.step();
         assert_eq!(cpu.reg_de.read_lower(), 0x55);
@@ -1031,7 +1031,7 @@ mod tests {
     #[test]
     fn ld_h_pointer_hl() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x66, 0x55], vec![]));
+            Bus::new_from_vecs(vec![0x66, 0x55], vec![]));
         cpu.reg_hl.write(0x0001);
         cpu.step();
         assert_eq!(cpu.reg_hl.read_higher(), 0x55);
@@ -1040,7 +1040,7 @@ mod tests {
     #[test]
     fn ld_l_pointer_hl() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0x6E, 0x55], vec![]));
+            Bus::new_from_vecs(vec![0x6E, 0x55], vec![]));
         cpu.reg_hl.write(0x0001);
         cpu.step();
         assert_eq!(cpu.reg_hl.read_lower(), 0x55);
@@ -1049,18 +1049,18 @@ mod tests {
     #[test]
     fn ld_high_immediate_a() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0xE0, 0x45], vec![]));
+            Bus::new_from_vecs(vec![0xE0, 0x45], vec![]));
         cpu.reg_af.write_a(0xF0);
         cpu.step();
         assert_eq!(cpu.cycle_count, 12);
-        assert_eq!(cpu.memory.read(0xFF45), 0xF0);
+        assert_eq!(cpu.bus.read(0xFF45), 0xF0);
     }
 
     #[test]
     fn ld_a_high_immediate() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0xF0, 0x45], vec![]));
-        cpu.memory.write(0xFF45, 0x12);
+            Bus::new_from_vecs(vec![0xF0, 0x45], vec![]));
+        cpu.bus.write(0xFF45, 0x12);
         cpu.step();
         assert_eq!(cpu.cycle_count, 12);
         assert_eq!(cpu.reg_af.read_a(), 0x12);
@@ -1069,17 +1069,17 @@ mod tests {
     #[test]
     fn ld_pointer_c_a() {
         let mut cpu = CPU::new(
-            MemoryManager::new_from_vecs(vec![0xE2], vec![]));
+            Bus::new_from_vecs(vec![0xE2], vec![]));
         cpu.reg_af.write_a(0xF0);
         cpu.reg_bc.write_lower(0x0F);
         cpu.step();
         assert_eq!(cpu.cycle_count, 8);
-        assert_eq!(cpu.memory.read(0xFF0F), 0xF0);
+        assert_eq!(cpu.bus.read(0xFF0F), 0xF0);
     }
 
     #[test]
     fn bit_7_h_to_one() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xCB, 0x7C], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xCB, 0x7C], vec![]));
         cpu.reg_hl.write(0xF000);
         cpu.step();
         assert!(!cpu.reg_af.flags.contains(Flags::N));
@@ -1089,7 +1089,7 @@ mod tests {
 
     #[test]
     fn bit_7_h_to_zero() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xCB, 0x7C], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xCB, 0x7C], vec![]));
         cpu.reg_hl.write(0x0F00);
         cpu.step();
         assert!(!cpu.reg_af.flags.contains(Flags::N));
@@ -1099,7 +1099,7 @@ mod tests {
 
     #[test]
     fn jr() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x18, 0x33], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x18, 0x33], vec![]));
         cpu.step();
         assert_eq!(cpu.program_counter.read(), 0x35);
         assert_eq!(cpu.cycle_count, 12);
@@ -1107,7 +1107,7 @@ mod tests {
 
     #[test]
     fn jrnz_no_jump() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x20, 0x33], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x20, 0x33], vec![]));
         cpu.reg_af.flags.insert(Flags::Z);
         cpu.step();
         assert_eq!(cpu.program_counter.read(), 0x02);
@@ -1116,7 +1116,7 @@ mod tests {
 
     #[test]
     fn jrnz_jump_positive() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x20, 0x33], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x20, 0x33], vec![]));
         cpu.reg_af.flags.remove(Flags::Z);
         cpu.step();
         assert_eq!(cpu.program_counter.read(), 0x35);
@@ -1126,7 +1126,7 @@ mod tests {
     #[test]
     fn jrnz_jump_negative() {
         // Jump -3
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x20, 0xFD], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x20, 0xFD], vec![]));
         cpu.reg_af.flags.remove(Flags::Z);
         cpu.step();
         assert_eq!(cpu.program_counter.read(), 0xFFFF);
@@ -1135,7 +1135,7 @@ mod tests {
 
     #[test]
     fn jrz_no_jump() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x28, 0x33], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x28, 0x33], vec![]));
         cpu.reg_af.flags.remove(Flags::Z);
         cpu.step();
         assert_eq!(cpu.program_counter.read(), 0x02);
@@ -1144,7 +1144,7 @@ mod tests {
 
     #[test]
     fn jrz_jump_positive() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x28, 0x33], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x28, 0x33], vec![]));
         cpu.reg_af.flags.insert(Flags::Z);
         cpu.step();
         assert_eq!(cpu.program_counter.read(), 0x35);
@@ -1153,7 +1153,7 @@ mod tests {
 
     #[test]
     fn jrnc_no_jump() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x30, 0x33], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x30, 0x33], vec![]));
         cpu.reg_af.flags.insert(Flags::C);
         cpu.step();
         assert_eq!(cpu.program_counter.read(), 0x02);
@@ -1162,7 +1162,7 @@ mod tests {
 
     #[test]
     fn jrnc_jump_positive() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x30, 0x33], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x30, 0x33], vec![]));
         cpu.reg_af.flags.remove(Flags::C);
         cpu.step();
         assert_eq!(cpu.program_counter.read(), 0x35);
@@ -1171,7 +1171,7 @@ mod tests {
 
     #[test]
     fn jrc_no_jump() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x38, 0x33], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x38, 0x33], vec![]));
         cpu.reg_af.flags.remove(Flags::C);
         cpu.step();
         assert_eq!(cpu.program_counter.read(), 0x02);
@@ -1180,7 +1180,7 @@ mod tests {
 
     #[test]
     fn jrc_jump_positive() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x38, 0x33], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x38, 0x33], vec![]));
         cpu.reg_af.flags.insert(Flags::C);
         cpu.step();
         assert_eq!(cpu.program_counter.read(), 0x35);
@@ -1189,19 +1189,19 @@ mod tests {
 
     #[test]
     fn call() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xCD, 0x34, 0x12], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xCD, 0x34, 0x12], vec![]));
         cpu.stack_pointer.write(0xD000);
         cpu.step();
         assert_eq!(cpu.cycle_count, 24);
         assert_eq!(cpu.program_counter.read(), 0x1234);
         assert_eq!(cpu.stack_pointer.read(), 0xCFFE);
-        assert_eq!(cpu.memory.read(0xCFFF), 0x03);
-        assert_eq!(cpu.memory.read(0xCFFE), 0x00);
+        assert_eq!(cpu.bus.read(0xCFFF), 0x03);
+        assert_eq!(cpu.bus.read(0xCFFE), 0x00);
     }
 
     #[test]
     fn ret() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xC9], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xC9], vec![]));
         cpu.stack_pointer.write(0xD000);
         cpu.push_u16_to_stack(0x1234);
         cpu.step();
@@ -1212,7 +1212,7 @@ mod tests {
 
     #[test]
     fn ld_b_b() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x40], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x40], vec![]));
         cpu.reg_bc.write_higher(0xF5);
         cpu.step();
         assert_eq!(cpu.reg_bc.read_higher(), 0xF5);
@@ -1220,7 +1220,7 @@ mod tests {
 
     #[test]
     fn ld_b_c() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x41], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x41], vec![]));
         cpu.reg_bc.write_lower(0xF5);
         cpu.step();
         assert_eq!(cpu.reg_bc.read_higher(), 0xF5);
@@ -1228,7 +1228,7 @@ mod tests {
 
     #[test]
     fn ld_b_d() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x42], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x42], vec![]));
         cpu.reg_de.write_higher(0xF5);
         cpu.step();
         assert_eq!(cpu.reg_bc.read_higher(), 0xF5);
@@ -1236,7 +1236,7 @@ mod tests {
 
     #[test]
     fn ld_b_e() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x43], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x43], vec![]));
         cpu.reg_de.write_lower(0xF5);
         cpu.step();
         assert_eq!(cpu.reg_bc.read_higher(), 0xF5);
@@ -1244,7 +1244,7 @@ mod tests {
 
     #[test]
     fn ld_b_h() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x44], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x44], vec![]));
         cpu.reg_hl.write_higher(0xF5);
         cpu.step();
         assert_eq!(cpu.reg_bc.read_higher(), 0xF5)
@@ -1252,7 +1252,7 @@ mod tests {
 
     #[test]
     fn ld_b_l() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x45], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x45], vec![]));
         cpu.reg_hl.write_lower(0xF5);
         cpu.step();
         assert_eq!(cpu.reg_bc.read_higher(), 0xF5)
@@ -1260,7 +1260,7 @@ mod tests {
 
     #[test]
     fn ld_b_a() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x47], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x47], vec![]));
         cpu.reg_af.write_higher(0xF5);
         cpu.step();
         assert_eq!(cpu.reg_bc.read_higher(), 0xF5)
@@ -1268,7 +1268,7 @@ mod tests {
 
     #[test]
     fn ld_b_immediate() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x06, 0xBB], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x06, 0xBB], vec![]));
         cpu.step();
         assert_eq!(cpu.cycle_count, 8);
         assert_eq!(cpu.reg_bc.read_higher(), 0xBB);
@@ -1276,7 +1276,7 @@ mod tests {
 
     #[test]
     fn ld_c_immediate() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x0E, 0xBB], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x0E, 0xBB], vec![]));
         cpu.step();
         assert_eq!(cpu.cycle_count, 8);
         assert_eq!(cpu.reg_bc.read_lower(), 0xBB);
@@ -1284,7 +1284,7 @@ mod tests {
 
     #[test]
     fn ld_d_immediate() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x16, 0xBB], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x16, 0xBB], vec![]));
         cpu.step();
         assert_eq!(cpu.cycle_count, 8);
         assert_eq!(cpu.reg_de.read_higher(), 0xBB);
@@ -1292,7 +1292,7 @@ mod tests {
 
     #[test]
     fn ld_e_immediate() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x1E, 0xBB], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x1E, 0xBB], vec![]));
         cpu.step();
         assert_eq!(cpu.cycle_count, 8);
         assert_eq!(cpu.reg_de.read_lower(), 0xBB);
@@ -1300,7 +1300,7 @@ mod tests {
 
     #[test]
     fn ld_h_immediate() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x26, 0xBB], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x26, 0xBB], vec![]));
         cpu.step();
         assert_eq!(cpu.cycle_count, 8);
         assert_eq!(cpu.reg_hl.read_higher(), 0xBB);
@@ -1308,7 +1308,7 @@ mod tests {
 
     #[test]
     fn ld_l_immediate() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x2E, 0xBB], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x2E, 0xBB], vec![]));
         cpu.step();
         assert_eq!(cpu.cycle_count, 8);
         assert_eq!(cpu.reg_hl.read_lower(), 0xBB);
@@ -1316,7 +1316,7 @@ mod tests {
 
     #[test]
     fn ld_a_immediate() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x3E, 0xBB], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x3E, 0xBB], vec![]));
         cpu.step();
         assert_eq!(cpu.cycle_count, 8);
         assert_eq!(cpu.reg_af.read_higher(), 0xBB);
@@ -1324,62 +1324,62 @@ mod tests {
 
     #[test]
     fn push_bc() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xC5], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xC5], vec![]));
         cpu.stack_pointer.write(0xD000);
         cpu.reg_bc.write(0x1234);
         cpu.step();
         assert_eq!(cpu.cycle_count, 16);
         assert_eq!(cpu.program_counter.read(), 0x0001);
         assert_eq!(cpu.stack_pointer.read(), 0xCFFE);
-        assert_eq!(cpu.memory.read(0xCFFF), 0x34);
-        assert_eq!(cpu.memory.read(0xCFFE), 0x12);
+        assert_eq!(cpu.bus.read(0xCFFF), 0x34);
+        assert_eq!(cpu.bus.read(0xCFFE), 0x12);
     }
 
     #[test]
     fn push_de() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xD5], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xD5], vec![]));
         cpu.stack_pointer.write(0xD000);
         cpu.reg_de.write(0x1234);
         cpu.step();
         assert_eq!(cpu.cycle_count, 16);
         assert_eq!(cpu.program_counter.read(), 0x0001);
         assert_eq!(cpu.stack_pointer.read(), 0xCFFE);
-        assert_eq!(cpu.memory.read(0xCFFF), 0x34);
-        assert_eq!(cpu.memory.read(0xCFFE), 0x12);
+        assert_eq!(cpu.bus.read(0xCFFF), 0x34);
+        assert_eq!(cpu.bus.read(0xCFFE), 0x12);
     }
 
     #[test]
     fn push_hl() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xE5], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xE5], vec![]));
         cpu.stack_pointer.write(0xD000);
         cpu.reg_hl.write(0x1234);
         cpu.step();
         assert_eq!(cpu.cycle_count, 16);
         assert_eq!(cpu.program_counter.read(), 0x0001);
         assert_eq!(cpu.stack_pointer.read(), 0xCFFE);
-        assert_eq!(cpu.memory.read(0xCFFF), 0x34);
-        assert_eq!(cpu.memory.read(0xCFFE), 0x12);
+        assert_eq!(cpu.bus.read(0xCFFF), 0x34);
+        assert_eq!(cpu.bus.read(0xCFFE), 0x12);
     }
 
     #[test]
     fn push_af() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xF5], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xF5], vec![]));
         cpu.stack_pointer.write(0xD000);
         cpu.reg_af.write(0x1234);
         cpu.step();
         assert_eq!(cpu.cycle_count, 16);
         assert_eq!(cpu.program_counter.read(), 0x0001);
         assert_eq!(cpu.stack_pointer.read(), 0xCFFE);
-        assert_eq!(cpu.memory.read(0xCFFF), 0x34);
-        assert_eq!(cpu.memory.read(0xCFFE), 0x12);
+        assert_eq!(cpu.bus.read(0xCFFF), 0x34);
+        assert_eq!(cpu.bus.read(0xCFFE), 0x12);
     }
 
     #[test]
     fn pop_bc() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xC1], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xC1], vec![]));
         cpu.stack_pointer.write(0xCFFE);
-        cpu.memory.write(0xCFFF, 0x34);
-        cpu.memory.write(0xCFFE, 0x12);
+        cpu.bus.write(0xCFFF, 0x34);
+        cpu.bus.write(0xCFFE, 0x12);
         cpu.step();
         assert_eq!(cpu.cycle_count, 12);
         assert_eq!(cpu.program_counter.read(), 0x0001);
@@ -1389,10 +1389,10 @@ mod tests {
 
     #[test]
     fn pop_de() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xD1], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xD1], vec![]));
         cpu.stack_pointer.write(0xCFFE);
-        cpu.memory.write(0xCFFF, 0x34);
-        cpu.memory.write(0xCFFE, 0x12);
+        cpu.bus.write(0xCFFF, 0x34);
+        cpu.bus.write(0xCFFE, 0x12);
         cpu.step();
         assert_eq!(cpu.cycle_count, 12);
         assert_eq!(cpu.program_counter.read(), 0x0001);
@@ -1402,10 +1402,10 @@ mod tests {
 
     #[test]
     fn pop_hl() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xE1], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xE1], vec![]));
         cpu.stack_pointer.write(0xCFFE);
-        cpu.memory.write(0xCFFF, 0x34);
-        cpu.memory.write(0xCFFE, 0x12);
+        cpu.bus.write(0xCFFF, 0x34);
+        cpu.bus.write(0xCFFE, 0x12);
         cpu.step();
         assert_eq!(cpu.cycle_count, 12);
         assert_eq!(cpu.program_counter.read(), 0x0001);
@@ -1415,10 +1415,10 @@ mod tests {
 
     #[test]
     fn pop_af() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xF1], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xF1], vec![]));
         cpu.stack_pointer.write(0xCFFE);
-        cpu.memory.write(0xCFFF, 0x34);
-        cpu.memory.write(0xCFFE, 0x12);
+        cpu.bus.write(0xCFFF, 0x34);
+        cpu.bus.write(0xCFFE, 0x12);
         cpu.step();
         assert_eq!(cpu.cycle_count, 12);
         assert_eq!(cpu.program_counter.read(), 0x0001);
@@ -1428,7 +1428,7 @@ mod tests {
 
     #[test]
     fn rl_c_no_carry() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xCB, 0x11], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xCB, 0x11], vec![]));
         cpu.reg_bc.write_lower(0b01010010);
         cpu.step();
         assert_eq!(cpu.cycle_count, 8);
@@ -1439,7 +1439,7 @@ mod tests {
 
     #[test]
     fn rl_c_to_carry() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xCB, 0x11], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xCB, 0x11], vec![]));
         cpu.reg_bc.write_lower(0b11010010);
         cpu.step();
         assert_eq!(cpu.cycle_count, 8);
@@ -1450,7 +1450,7 @@ mod tests {
 
     #[test]
     fn rl_c_from_carry() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xCB, 0x11], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xCB, 0x11], vec![]));
         cpu.reg_bc.write_lower(0);
         cpu.reg_af.flags.insert(Flags::C);
         cpu.step();
@@ -1462,7 +1462,7 @@ mod tests {
 
     #[test]
     fn rla_no_carry() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x17], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x17], vec![]));
         cpu.reg_af.write_higher(0b01010010);
         cpu.step();
         assert_eq!(cpu.cycle_count, 4);
@@ -1473,7 +1473,7 @@ mod tests {
 
     #[test]
     fn rla_to_carry() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x17], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x17], vec![]));
         cpu.reg_af.write_higher(0b11010010);
         cpu.step();
         assert_eq!(cpu.cycle_count, 4);
@@ -1484,7 +1484,7 @@ mod tests {
 
     #[test]
     fn rla_from_carry() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0x17], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x17], vec![]));
         cpu.reg_af.write_higher(0);
         cpu.reg_af.flags.insert(Flags::C);
         cpu.step();
@@ -1496,7 +1496,7 @@ mod tests {
 
     #[test]
     fn cp_a_zero() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xFE, 0x10], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xFE, 0x10], vec![]));
         cpu.reg_af.write_higher(0x10);
         cpu.step();
         assert_eq!(cpu.cycle_count, 8);
@@ -1506,7 +1506,7 @@ mod tests {
 
     #[test]
     fn cp_a_half_carry() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xFE, 0x9], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xFE, 0x9], vec![]));
         cpu.reg_af.write_higher(0x10);
         cpu.step();
         assert_eq!(cpu.cycle_count, 8);
@@ -1516,7 +1516,7 @@ mod tests {
 
     #[test]
     fn cp_a_no_carry() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xFE, 0x1], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xFE, 0x1], vec![]));
         cpu.reg_af.write_higher(0x11);
         cpu.step();
         assert_eq!(cpu.cycle_count, 8);
@@ -1526,7 +1526,7 @@ mod tests {
 
     #[test]
     fn cp_a_carry() {
-        let mut cpu = CPU::new(MemoryManager::new_from_vecs(vec![0xFE, 0x11], vec![]));
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xFE, 0x11], vec![]));
         cpu.reg_af.write_higher(0x10);
         cpu.step();
         assert_eq!(cpu.cycle_count, 8);
