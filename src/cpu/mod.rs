@@ -74,10 +74,13 @@ impl CPU {
 
         print!("  {}", instruction.mnemonic);
         if instruction.length_in_bytes > 1 {
-            print!(" -- {:02X}", self.bus.read(self.program_counter.read() - neg_offset));
+            print!(" -- ");
         }
-        if instruction.length_in_bytes > 2 {
+        if instruction.length_in_bytes == 3 {
             print!("{:02X}", self.bus.read(self.program_counter.read() - neg_offset + 1));
+        }
+        if instruction.length_in_bytes > 1 {
+            print!("{:02X}", self.bus.read(self.program_counter.read() - neg_offset));
         }
         println!();
     }
