@@ -1049,18 +1049,18 @@ mod tests {
     #[test]
     fn ld_high_immediate_a() {
         let mut cpu = CPU::new(
-            Bus::new_from_vecs(vec![0xE0, 0x45], vec![]));
+            Bus::new_from_vecs(vec![0xE0, 0xF5], vec![]));
         cpu.reg_af.write_a(0xF0);
         cpu.step();
         assert_eq!(cpu.cycle_count, 12);
-        assert_eq!(cpu.bus.read(0xFF45), 0xF0);
+        assert_eq!(cpu.bus.read(0xFFF5), 0xF0);
     }
 
     #[test]
     fn ld_a_high_immediate() {
         let mut cpu = CPU::new(
-            Bus::new_from_vecs(vec![0xF0, 0x45], vec![]));
-        cpu.bus.write(0xFF45, 0x12);
+            Bus::new_from_vecs(vec![0xF0, 0xF5], vec![]));
+        cpu.bus.write(0xFFF5, 0x12);
         cpu.step();
         assert_eq!(cpu.cycle_count, 12);
         assert_eq!(cpu.reg_af.read_a(), 0x12);
@@ -1070,11 +1070,11 @@ mod tests {
     fn ld_pointer_c_a() {
         let mut cpu = CPU::new(
             Bus::new_from_vecs(vec![0xE2], vec![]));
-        cpu.reg_af.write_a(0xF0);
-        cpu.reg_bc.write_lower(0x0F);
+        cpu.reg_af.write_a(0xCC);
+        cpu.reg_bc.write_lower(0xF0);
         cpu.step();
         assert_eq!(cpu.cycle_count, 8);
-        assert_eq!(cpu.bus.read(0xFF0F), 0xF0);
+        assert_eq!(cpu.bus.read(0xFFF0), 0xCC);
     }
 
     #[test]

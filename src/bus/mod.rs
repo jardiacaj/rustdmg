@@ -46,11 +46,11 @@ pub struct IOPorts {
 
 impl MemoryZone for IOPorts {
     fn read(&self, address: u16) -> u8 {
-        println!("Reading from IO");
+        panic!("Reading from IO");
         self.data[self.global_address_to_local_address(address) as usize]
     }
     fn write(&mut self, address: u16, value: u8) {
-        println!("Writing to IO");
+        panic!("Writing to IO");
         let local_address = self.global_address_to_local_address(address) as usize;
         self.data[local_address] = value;
     }
