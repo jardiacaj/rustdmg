@@ -54,11 +54,11 @@ impl PPU {
 
         if duration > 0 && self.cycles_in_current_mode >= duration {
             self.current_mode = next_mode(&self.current_mode, &self.current_line);
-            self.cycles_in_current_mode = 1;
+            self.cycles_in_current_mode = 0;
         }
 
         if self.cycles_in_current_line == LINE_TOTAL_DURATION {
-            self.cycles_in_current_line = 1;
+            self.cycles_in_current_line = 0;
             self.current_line += 1;
             if self.current_line == DRAWN_LINES + VBLANK_LINES {
                 self.current_line = 0;
@@ -82,20 +82,20 @@ mod tests {
     #[test]
     fn mode_timings() {
         let mut ppu = PPU::new();
-        for i in 1..(20 * 4) {
-            ppu.cycle();
+        for i in 0..(20 * 4) {
             assert_eq!(ppu.cycles_in_current_mode, i);
             assert_eq!(ppu.current_mode, PPU_Mode::OAM);
-        }
-        for i in 1..(43 * 4) {
             ppu.cycle();
+        }
+        for i in 0..(43 * 4) {
             assert_eq!(ppu.cycles_in_current_mode, i);
             assert_eq!(ppu.current_mode, PPU_Mode::PixelTransfer);
-        }
-        for i in 1..(51 * 4) {
             ppu.cycle();
+        }
+        for i in 0..(51 * 4) {
             assert_eq!(ppu.cycles_in_current_mode, i);
             assert_eq!(ppu.current_mode, PPU_Mode::HBlank);
+            ppu.cycle();
         }
     }
 }
