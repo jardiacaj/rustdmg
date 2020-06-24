@@ -1,6 +1,9 @@
 pub mod cartridge;
 pub mod bootrom;
 
+use std::cell::{RefCell, RefMut};
+use std::rc::Rc;
+
 use cartridge::Cartridge;
 use cartridge::ROM_BANK_SIZE;
 use bootrom::BootROM;
@@ -55,13 +58,13 @@ impl RAMBank {
 
 pub struct IOPorts {
     pub data: Vec<u8>,
-    ppu: &PPU,
+    ppu: Rc<RefCell<PPU>>,
 }
 
 impl MemoryZone for IOPorts {
     fn read(&self, address: u16) -> u8 {
         match address {
-            IO_LCD_Y_COORDINATE => { self.ppu.current_line }
+            IO_LCD_Y_COORDINATE => { self.ppu.borrow().current_line }
             _ => {panic!("Reading from IO address {:04X}", address);}
         }
         // self.data[self.global_address_to_local_address(address) as usize]
@@ -87,6 +90,13 @@ impl MemoryZone for IOPorts {
 
 impl IOPorts {
     fn global_address_to_local_address(&self, address: u16) -> u16 { address - IO_PORTS_BASE_ADDRESS }
+
+    fn new(ppu: Rc<RefCell<PPU>>) -> IOPorts {
+        IOPorts{
+            data: vec![0; IO_PORTS_SIZE as usize], 
+            ppu,
+        }
+    }
 }
 
 pub struct Bus {
@@ -109,7 +119,7 @@ pub struct Bus {
 //            io_ram: MemoryZone,
 //            hi_ram: MemoryZone,
 //            interrupt_enable_register: MemoryZone,
-    ppu: PPU,
+    ppu: Rc<RefCell<PPU>>,
 }
 
 impl Bus {
@@ -121,7 +131,7 @@ impl Bus {
     }
 
     pub fn cycle(&mut self) {
-        self.ppu.cycle();
+        self.ppu.borrow_mut().cycle();
     }
 
     fn new_video_ram() -> RAMBank {
@@ -145,32 +155,35 @@ impl Bus {
         }
     }
 
-    fn new_io_ports(&self) -> IOPorts { IOPorts{data: vec![0; IO_PORTS_SIZE as usize]} }
-
-    pub fn new(boot_rom: BootROM, cartridge: Cartridge, ppu: PPU) -> Bus {
+    pub fn new (boot_rom: BootROM, cartridge: Cartridge, ppu: PPU) -> Bus {
+        let ppu_ref = Rc::new(RefCell::new(ppu));
+        let io_ports = IOPorts::new(Rc::clone(&ppu_ref));
         Bus {
             boot_rom_active: true,
             boot_rom,
             cartridge,
             work_ram: Bus::new_work_ram(),
             video_ram: Bus::new_video_ram(),
-            io_ports: Bus::new_io_ports(),
+            io_ports,
             high_ram: Bus::new_high_ram(),
-            ppu,
+            ppu: Rc::clone(&ppu_ref),
         }
     }
 
     pub fn new_from_vecs(boot_rom_data: Vec<u8>, cart_rom_bank_zero_data: Vec<u8>) -> Bus {
         let boot_rom = BootROM{data: boot_rom_data};
+        let ppu: PPU = PPU::new();
+        let ppu_ref = Rc::new(RefCell::new(ppu));
+        let io_ports = IOPorts::new(Rc::clone(&ppu_ref));
         Bus {
             boot_rom_active: true,
             boot_rom,
             cartridge: Cartridge::new_dummy_cartridge(),
             work_ram: Bus::new_work_ram(),
             video_ram: Bus::new_video_ram(),
-            io_ports: Bus::new_io_ports(),
+            io_ports,
             high_ram: Bus::new_high_ram(),
-            ppu: PPU::new(),
+            ppu: Rc::clone(&ppu_ref),
         }
     }
 
