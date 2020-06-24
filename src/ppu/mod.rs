@@ -28,7 +28,7 @@ fn next_mode(mode: &PPU_Mode, current_line: u8) -> PPU_Mode {
 
 pub struct PPU {
     pub cycle_count: u64,
-    current_line: u8,
+    pub current_line: u8,
     current_mode: PPU_Mode,
     cycles_in_current_mode: u16,
     cycles_in_current_line: u16,

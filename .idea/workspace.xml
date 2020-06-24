@@ -24,6 +24,8 @@
   <component name="ChangeListManager">
     <list default="true" id="77534023-f48c-484c-890f-135cfd6c2296" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/bus/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/bus/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ppu/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/ppu/mod.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -104,9 +106,9 @@
       </method>
     </configuration>
     <list>
-      <item itemvalue="Cargo Command.Test" />
-      <item itemvalue="Cargo Command.Run" />
       <item itemvalue="Cargo Command.Run rustdmg" />
+      <item itemvalue="Cargo Command.Run" />
+      <item itemvalue="Cargo Command.Test" />
     </list>
   </component>
   <component name="RustProjectSettings">
