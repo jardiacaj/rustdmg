@@ -284,8 +284,64 @@ macro_rules! jump_relative {
     )
 }
 
+fn set_cpu_flags_for_sub_or_cp(cpu: &mut CPU, value: u8) {
+    let a = cpu.reg_af.read_a();
+    cpu.reg_af.flags.set(Flags::Z, a == value);
+    cpu.reg_af.flags.set(Flags::C, a < value);
+    cpu.reg_af.flags.set(Flags::H, (a & 0x0F) < (value & 0x0F));
+    cpu.reg_af.flags.insert(Flags::N);
+}
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 128] = [
+macro_rules! sub {
+    ($opcode:literal, $register:ident, $read_method:ident, $register_name:expr) => (
+        Instruction{
+            opcode: $opcode,
+            mnemonic: concat!("SUB ", $register_name),
+            description: concat!("Substract ", $register_name, " from A"),
+            length_in_bytes: 1, cycles: "4", flags_changed: "Z1HC",
+            implementation: |cpu| {
+                let subtrahend = cpu.$register.$read_method();
+                set_cpu_flags_for_sub_or_cp(cpu, subtrahend);
+                let (target_value, _carried) = cpu.reg_af.read_a().overflowing_sub(subtrahend);
+                cpu.reg_af.write_a(target_value);
+                cpu.cycle_count += 4;
+            }
+        }
+    );
+    ($opcode:literal, hl) => (
+        Instruction{
+            opcode: $opcode,
+            mnemonic: concat!("SUB (HL)"),
+            description: concat!("Substract (HL) from A"),
+            length_in_bytes: 1, cycles: "8", flags_changed: "Z1HC",
+            implementation: |cpu| {
+                let subtrahend = cpu.bus.read(cpu.reg_hl.read());
+                set_cpu_flags_for_sub_or_cp(cpu, subtrahend);
+                let (target_value, _carried) = cpu.reg_af.read_a().overflowing_sub(subtrahend);
+                cpu.reg_af.write_a(target_value);
+                cpu.cycle_count += 8;
+            }
+        }
+    );
+    ($opcode:literal, immediate) => (
+        Instruction{
+            opcode: $opcode,
+            mnemonic: concat!("SUB d8"),
+            description: concat!("Substract immediate from A"),
+            length_in_bytes: 2, cycles: "8", flags_changed: "Z1HC",
+            implementation: |cpu| {
+                let subtrahend = cpu.pop_u8_from_pc();
+                set_cpu_flags_for_sub_or_cp(cpu, subtrahend);
+                let (target_value, _carried) = cpu.reg_af.read_a().overflowing_sub(subtrahend);
+                cpu.reg_af.write_a(target_value);
+                cpu.cycle_count += 8;
+            }
+        }
+    )
+}
+
+
+pub const INSTRUCTIONS_NOCB: [Instruction; 137] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -428,6 +484,15 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 128] = [
     ld_register_pointer!(0x7E, reg_af, write_a, "A", reg_hl, "HL"),
     ld_8bit_register_register!(0x7F, reg_af, write_a, "A",  reg_af, read_higher, "A"),
 
+    sub!(0x90, reg_bc, read_higher, "B"),
+    sub!(0x91, reg_bc, read_lower, "C"),
+    sub!(0x92, reg_de, read_higher, "D"),
+    sub!(0x93, reg_de, read_lower, "E"),
+    sub!(0x94, reg_hl, read_higher, "H"),
+    sub!(0x95, reg_hl, read_lower, "L"),
+    sub!(0x96, hl),
+    sub!(0x97, reg_af, read_a, "A"),
+
     Instruction{opcode: 0xAF, mnemonic: "XOR A", description: "XOR A with A (zeroes A)",
         length_in_bytes: 1, cycles: "4", flags_changed: "Z000",
         implementation: |cpu| {
@@ -462,6 +527,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 128] = [
 
     pop!(0xD1, reg_de, "DE"),
     push!(0xD5, reg_de, "DE"),
+    sub!(0xD6, immediate),
 
     Instruction{opcode: 0xE0, mnemonic: "LD ($FF00+imm), A", description: "Put A to pointer 0xFF00 + immediate",
         length_in_bytes: 2, cycles: "12", flags_changed: "",
@@ -506,11 +572,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 128] = [
         implementation: |cpu| {
             cpu.cycle_count += 8;
             let immediate = cpu.pop_u8_from_pc();
-            let a = cpu.reg_af.read_a();
-            cpu.reg_af.flags.set(Flags::Z, a == immediate);
-            cpu.reg_af.flags.set(Flags::C, a < immediate);
-            cpu.reg_af.flags.set(Flags::H, (a & 0x0F) < (immediate & 0x0F));
-            cpu.reg_af.flags.insert(Flags::N);
+            set_cpu_flags_for_sub_or_cp(cpu, immediate);
         } },
 ];
 
@@ -1527,6 +1589,112 @@ mod tests {
         assert_eq!(cpu.cycle_count, 8);
         assert_eq!(cpu.program_counter.read(), 0x0002);
         assert_eq!(cpu.reg_af.flags, Flags::C | Flags::H | Flags::N);
+    }
+
+    #[test]
+    fn sub_a_zero() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x97], vec![]));
+        cpu.reg_af.write_higher(0x10);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 4);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.reg_af.flags, Flags::Z | Flags::N);
+        assert_eq!(cpu.reg_af.read_higher(), 0);
+    }
+
+    #[test]
+    fn sub_b_half_carry() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x90], vec![]));
+        cpu.reg_af.write_higher(0x13);
+        cpu.reg_bc.write_higher(0x04);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 4);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.reg_af.flags, Flags::N | Flags::H);
+        assert_eq!(cpu.reg_af.read_higher(), 0x0F);
+    }
+
+    #[test]
+    fn sub_c_no_carry() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x91], vec![]));
+        cpu.reg_af.write_higher(0x11);
+        cpu.reg_bc.write_lower(0x10);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 4);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.reg_af.flags, Flags::N);
+        assert_eq!(cpu.reg_af.read_higher(), 0x01);
+    }
+
+    #[test]
+    fn sub_d_carry() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x92], vec![]));
+        cpu.reg_af.write_higher(0x05);
+        cpu.reg_de.write_higher(0x06);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 4);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.reg_af.flags, Flags::C | Flags::H | Flags::N);
+        assert_eq!(cpu.reg_af.read_higher(), 0xFF);
+    }
+
+    #[test]
+    fn sub_e_half_carry() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x93], vec![]));
+        cpu.reg_af.write_higher(0x13);
+        cpu.reg_de.write_lower(0x04);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 4);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.reg_af.flags, Flags::N | Flags::H);
+        assert_eq!(cpu.reg_af.read_higher(), 0x0F);
+    }
+
+    #[test]
+    fn sub_h_no_carry() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x94], vec![]));
+        cpu.reg_af.write_higher(0x11);
+        cpu.reg_hl.write_higher(0x10);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 4);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.reg_af.flags, Flags::N);
+        assert_eq!(cpu.reg_af.read_higher(), 0x01);
+    }
+
+    #[test]
+    fn sub_l_carry() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x95], vec![]));
+        cpu.reg_af.write_higher(0x05);
+        cpu.reg_hl.write_lower(0x06);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 4);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.reg_af.flags, Flags::C | Flags::H | Flags::N);
+        assert_eq!(cpu.reg_af.read_higher(), 0xFF);
+    }
+
+    #[test]
+    fn sub_hl_carry() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0x96, 0x06], vec![]));
+        cpu.reg_af.write_higher(0x05);
+        cpu.reg_hl.write(0x0001);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 8);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.reg_af.flags, Flags::C | Flags::H | Flags::N);
+        assert_eq!(cpu.reg_af.read_higher(), 0xFF);
+    }
+
+    #[test]
+    fn sub_immediate() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xD6, 0x06], vec![]));
+        cpu.reg_af.write_higher(0x05);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 8);
+        assert_eq!(cpu.program_counter.read(), 0x0002);
+        assert_eq!(cpu.reg_af.flags, Flags::C | Flags::H | Flags::N);
+        assert_eq!(cpu.reg_af.read_higher(), 0xFF);
     }
 
 }
