@@ -6,7 +6,7 @@ use register::*;
 use instruction::*;
 
 
-pub struct CPU {
+pub struct CPU <'a> {
     pub reg_af: AFRegister,
     pub reg_bc: Register16bit,
     pub reg_de: Register16bit,
@@ -15,10 +15,39 @@ pub struct CPU {
     pub program_counter: Register16bit,
     pub bus: Bus,
     pub cycle_count: u64,
+    pub instruction_vector: Vec<Instruction<'a>>, // FIXME this should be removed when all instructions are implemented
+    pub cb_instruction_vector: Vec<Instruction<'a>>, // FIXME this should be removed when all instructions are implemented
 }
 
-impl CPU {
-    pub fn new(bus: Bus) -> CPU {
+impl<'a> CPU<'a> {
+    pub fn new(bus: Bus) -> CPU<'a> {
+        let mut instruction_vector = vec!();
+        let mut cb_instruction_vector = vec!();
+
+        for i in INSTRUCTIONS_NOCB.iter() {
+            while (instruction_vector.len() as u8) < i.opcode {
+                instruction_vector.push(
+                    Instruction{opcode: instruction_vector.len() as u8, mnemonic: "NOT IMPLEMENTED", description: "NOT IMPLEMENTED",
+                        length_in_bytes: 1, cycles: "0", flags_changed: "",
+                        implementation: |_cpu| { panic!("Bad opcode!") }
+                    }
+                )
+            }
+            instruction_vector.push(i.clone());
+        }
+
+        for i in INSTRUCTIONS_CB.iter() {
+            while (cb_instruction_vector.len() as u8) < i.opcode {
+                cb_instruction_vector.push(
+                    Instruction{opcode: cb_instruction_vector.len() as u8, mnemonic: "NOT IMPLEMENTED", description: "NOT IMPLEMENTED",
+                        length_in_bytes: 1, cycles: "0", flags_changed: "",
+                        implementation: |_cpu| { panic!("Bad CB opcode!") }
+                    }
+                )
+            }
+            cb_instruction_vector.push(i.clone());
+        }
+
         CPU {
             reg_af: AFRegister::new(),
             reg_bc: Register16bit::new(),
@@ -28,6 +57,8 @@ impl CPU {
             program_counter: Register16bit::new(),
             bus,
             cycle_count: 0,
+            instruction_vector,
+            cb_instruction_vector,
         }
     }
 
@@ -65,7 +96,13 @@ impl CPU {
     }
 
     // FIXME makes assumptions on PC
-    fn print_instruction(&mut self, instruction: &Instruction, is_cb: bool) {
+    fn print_instruction(&mut self, opcode: u8, is_cb: bool) {
+        let instruction: &Instruction;
+        if is_cb {
+            instruction = &self.cb_instruction_vector[opcode as usize];
+        } else {
+            instruction = &self.instruction_vector[opcode as usize];
+        }
         let neg_offset: u16 = match is_cb {
             true => 1,
             false => 0,
@@ -85,15 +122,15 @@ impl CPU {
     }
 
     fn run_op(&mut self) {
+        println!("Cycle {}", self.cycle_count);
         let opcode = self.pop_u8_from_pc();
         print!("OP: {:02X}", opcode);
 
-        let instruction_index = CPU::get_instruction_index_from_opcode(opcode);
-        let instruction = &INSTRUCTIONS_NOCB[instruction_index];
+        let instruction = &self.instruction_vector[opcode as usize];
         let implementation = instruction.implementation;
         let cycles_before_op = self.cycle_count;
 
-        self.print_instruction(instruction, false);
+        self.print_instruction(opcode, false);
         implementation(self);
 
         for _i in cycles_before_op..self.cycle_count {
@@ -105,36 +142,11 @@ impl CPU {
         let opcode = self.pop_u8_from_pc();
         print!("CB OP: {:02X}", opcode);
 
-        let instruction_index = CPU::get_cb_instruction_index_from_opcode(opcode);
-        let instruction = &INSTRUCTIONS_CB[instruction_index];
+        let instruction = &self.cb_instruction_vector[opcode as usize];
         let implementation = instruction.implementation;
 
-        self.print_instruction(instruction, true);
+        self.print_instruction(opcode, true);
         implementation(self);
-    }
-
-    /// FIXME this should go away once all instructions are implemented, then opcodes will be
-    /// array indexes
-    fn get_instruction_index_from_opcode(opcode: u8) -> usize {
-        match INSTRUCTIONS_NOCB
-            .iter()
-            .enumerate()
-            .find(|enumerated_instruction| enumerated_instruction.1.opcode == opcode) {
-            Some(enumerated_instruction) => return enumerated_instruction.0,
-            None => panic!("Bad opcode {:#02X?}", opcode),
-        }
-    }
-
-    /// FIXME this should go away once all instructions are implemented, then opcodes will be
-    /// array indexes
-    fn get_cb_instruction_index_from_opcode(opcode: u8) -> usize {
-        match INSTRUCTIONS_CB
-            .iter()
-            .enumerate()
-            .find(|enumerated_instruction| enumerated_instruction.1.opcode == opcode) {
-            Some(enumerated_instruction) => return enumerated_instruction.0,
-            None => panic!("Bad opcode {:#02X?}", opcode),
-        }
     }
 
     pub fn step(&mut self) {

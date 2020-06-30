@@ -5,12 +5,12 @@ use super::cpu::CPU;
 use std::io;
 use crate::ppu::PPU;
 
-pub struct DMG {
-    cpu: CPU,
+pub struct DMG<'a> {
+    cpu: CPU<'a>,
 }
 
-impl DMG {
-    pub fn new(rom_file_path: &String) -> io::Result<DMG> {
+impl<'a> DMG<'a> {
+    pub fn new(rom_file_path: &String) -> io::Result<DMG<'a>> {
         let cartridge = Cartridge::read_cartridge_from_romfile(rom_file_path)?;
         let boot_rom = BootROM::new("DMG_ROM.bin")?;
         let ppu = PPU::new();

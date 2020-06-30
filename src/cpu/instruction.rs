@@ -2,6 +2,17 @@ use super::CPU;
 use super::Flags;
 use crate::cpu::register::DMGRegister;
 
+#[derive(Clone)]
+pub struct Instruction <'a> {
+    pub opcode: u8,
+    pub mnemonic: &'a str,
+    pub description: &'a str,
+    pub length_in_bytes: u8,
+    pub cycles: &'a str,
+    pub flags_changed: &'a str,
+    pub implementation: fn(&mut CPU),
+}
+
 macro_rules! push {
     ($opcode:literal, $register:ident, $register_name:expr) => (
         Instruction{
@@ -548,8 +559,6 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 137] = [
         } },
 
     push!(0xE5, reg_hl, "HL"),
-    pop!(0xF1, reg_af, "AF"),
-    push!(0xF5, reg_af, "AF"),
 
     Instruction{opcode: 0xEA, mnemonic: "LD (a16), A", description: "Load A to immediate pointer",
         length_in_bytes: 3, cycles: "16", flags_changed: "----",
@@ -566,6 +575,9 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 137] = [
             let address = 0xFF00 + (cpu.pop_u8_from_pc() as u16);
             cpu.reg_af.write_a(cpu.bus.read(address));
         } },
+
+    pop!(0xF1, reg_af, "AF"),
+    push!(0xF5, reg_af, "AF"),
 
     Instruction{opcode: 0xFE, mnemonic: "CP d8", description: "Compare A with immediate",
         length_in_bytes: 2, cycles: "8", flags_changed: "Z1HC",
@@ -598,16 +610,6 @@ pub const INSTRUCTIONS_CB: [Instruction; 8] = [
         } },
 
 ];
-
-pub struct Instruction <'a> {
-    pub opcode: u8,
-    pub mnemonic: &'a str,
-    pub description: &'a str,
-    pub length_in_bytes: u8,
-    pub cycles: &'a str,
-    pub flags_changed: &'a str,
-    pub implementation: fn(&mut CPU),
-}
 
 #[cfg(test)]
 mod tests {
