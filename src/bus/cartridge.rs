@@ -1,11 +1,10 @@
-use super::MemoryZone;
+use super::*;
 
 use std::fs;
 use std::io;
 use std::io::Read;
 use std::str;
 
-pub const ROM_BANK_SIZE: usize = 0x4000;
 
 const CARTRIDGE_TYPES: [CartridgeType; 26] = [
     CartridgeType{code: 0x00, name:"ROM only", supported: true},

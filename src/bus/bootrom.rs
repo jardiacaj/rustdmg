@@ -1,10 +1,8 @@
-use super::MemoryZone;
+use super::*;
 
 use std::fs;
 use std::io;
 use std::io::Read;
-
-pub const BOOT_ROM_SIZE: usize = 256;
 
 pub struct BootROM { pub data: Vec<u8> }
 

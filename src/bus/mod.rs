@@ -1,15 +1,19 @@
 pub mod cartridge;
 pub mod bootrom;
+pub mod io_ports;
+pub mod ram_bank;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
 use cartridge::Cartridge;
-use cartridge::ROM_BANK_SIZE;
 use bootrom::BootROM;
-use crate::bus::bootrom::BOOT_ROM_SIZE;
+use io_ports::IOPorts;
+use ram_bank::RAMBank;
 use crate::ppu::PPU;
 
+const ROM_BANK_SIZE: usize = 0x4000;
+const BOOT_ROM_SIZE: usize = 256;
 const HIGH_RAM_BANK_SIZE: u16 = 0x007F;
 const HIGH_RAM_BASE_ADDRESS: u16 = 0xFF80;
 const WORK_RAM_BANK_SIZE: u16 = 0x1000;
@@ -19,84 +23,10 @@ const VIDEO_RAM_BASE_ADDRESS: u16 = 0x8000;
 const IO_PORTS_SIZE: u16 = 0x80;
 const IO_PORTS_BASE_ADDRESS: u16 = 0xFF00;
 
-const IO_SOUND_CHANNEL_CONTROL_NR50: u16 = 0xFF24;
-const IO_SOUND_ON_OFF_NR52: u16 = 0xFF26;
-const IO_SOUND_CH1_SOUND_LENGTH_WAVE_PATTERN_DUTY_NR11: u16 = 0xFF11;
-const IO_SOUND_CH1_VOLUME_ENVELOPE_NR12: u16 = 0xFF12;
-const IO_SOUND_CH1_FREQUENCY_LO_NR13: u16 = 0xFF13;
-const IO_SOUND_CH1_FREQUENCY_HI_NR14: u16 = 0xFF14;
-const IO_SOUND_OUTPUT_TERMINAL_NR51: u16 = 0xFF25;
-
-const IO_LCD_CONTROL: u16 = 0xFF40;
-const IO_LCD_SCROLL_Y: u16 = 0xFF42;
-const IO_LCD_Y_COORDINATE: u16 = 0xFF44;
-const IO_LDC_BG_PALETTE_DATA: u16 = 0xFF47;
 
 pub trait MemoryZone {
     fn read(&self, address: u16) -> u8;
     fn write(&mut self, address: u16, value: u8);
-}
-
-pub struct RAMBank {
-    pub data: Vec<u8>,
-    pub base_address: u16,
-}
-
-impl MemoryZone for RAMBank {
-    fn read(&self, address: u16) -> u8 {
-        self.data[self.global_address_to_local_address(address) as usize]
-    }
-    fn write(&mut self, address: u16, value: u8) {
-        let local_address = self.global_address_to_local_address(address) as usize;
-        self.data[local_address] = value;
-    }
-}
-
-impl RAMBank {
-    fn global_address_to_local_address(&self, address: u16) -> u16 { address - self.base_address }
-}
-
-pub struct IOPorts {
-    pub data: Vec<u8>,
-    ppu: Rc<RefCell<PPU>>,
-}
-
-impl MemoryZone for IOPorts {
-    fn read(&self, address: u16) -> u8 {
-        match address {
-            IO_LCD_Y_COORDINATE => { self.ppu.borrow().current_line }
-            _ => {panic!("Reading from IO address {:04X}", address);}
-        }
-        // self.data[self.global_address_to_local_address(address) as usize]
-    }
-    fn write(&mut self, address: u16, value: u8) {
-        match address {
-            IO_SOUND_CHANNEL_CONTROL_NR50 => { println!("Not implemented"); }
-            IO_SOUND_ON_OFF_NR52 => { println!("Not implemented"); }
-            IO_SOUND_CH1_SOUND_LENGTH_WAVE_PATTERN_DUTY_NR11 => { println!("Not implemented"); }
-            IO_SOUND_CH1_VOLUME_ENVELOPE_NR12 => { println!("Not implemented"); }
-            IO_SOUND_CH1_FREQUENCY_LO_NR13 => { println!("Not implemented"); }
-            IO_SOUND_CH1_FREQUENCY_HI_NR14 => { println!("Not implemented"); }
-            IO_SOUND_OUTPUT_TERMINAL_NR51 => { println!("Not implemented"); }
-            IO_LDC_BG_PALETTE_DATA => { println!("Not implemented"); }
-            IO_LCD_SCROLL_Y => { println!("Not implemented"); }
-            IO_LCD_CONTROL => { println!("Not implemented"); }
-            _ => {panic!("Writing to IO: address {:04X} value {:02X}", address, value);}
-        }
-        let local_address = self.global_address_to_local_address(address) as usize;
-        self.data[local_address] = value;
-    }
-}
-
-impl IOPorts {
-    fn global_address_to_local_address(&self, address: u16) -> u16 { address - IO_PORTS_BASE_ADDRESS }
-
-    fn new(ppu: Rc<RefCell<PPU>>) -> IOPorts {
-        IOPorts{
-            data: vec![0; IO_PORTS_SIZE as usize], 
-            ppu,
-        }
-    }
 }
 
 pub struct Bus {
