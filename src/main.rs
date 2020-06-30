@@ -7,21 +7,18 @@ fn main() {
     println!("rustdmg");
 
     let mut args = env::args();
-    let mut rom_file_path: String;
+    let mut rom_file_path: Option<String> = None;
+    let mut debug = false;
     args.next(); // skip first element as it's the called program name
-    match args.next() {
-        Some(argument) => rom_file_path = argument,
-        None => {
-            println!("Please enter ROM file path");
-            rom_file_path = String::new();
-            io::stdin()
-                .read_line(&mut rom_file_path)
-                .expect("Failed to read rom file path");
-            rom_file_path = rom_file_path.trim().to_string();
+    while let Some(argument) = args.next() {
+        if argument == "--debug" {
+            debug = true;
+        } else {
+            rom_file_path = Some(argument);
         }
     }
 
-
-    let mut dmg = dmg::DMG::new(&rom_file_path).unwrap();
+    let mut dmg = dmg::DMG::new(&rom_file_path.unwrap()).unwrap();
+    dmg.cpu.debug = false;
     dmg.run();
 }

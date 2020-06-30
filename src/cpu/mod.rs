@@ -17,6 +17,7 @@ pub struct CPU <'a> {
     pub cycle_count: u64,
     pub instruction_vector: Vec<Instruction<'a>>, // FIXME this should be removed when all instructions are implemented
     pub cb_instruction_vector: Vec<Instruction<'a>>, // FIXME this should be removed when all instructions are implemented
+    pub debug: bool,
 }
 
 impl<'a> CPU<'a> {
@@ -59,6 +60,7 @@ impl<'a> CPU<'a> {
             cycle_count: 0,
             instruction_vector,
             cb_instruction_vector,
+            debug: false,
         }
     }
 
@@ -100,13 +102,17 @@ impl<'a> CPU<'a> {
         let instruction: &Instruction;
         if is_cb {
             instruction = &self.cb_instruction_vector[opcode as usize];
+            print!("CB OP: {:02X}", opcode);
         } else {
             instruction = &self.instruction_vector[opcode as usize];
+            print!("OP: {:02X}", opcode);
         }
         let neg_offset: u16 = match is_cb {
             true => 1,
             false => 0,
         };
+
+        println!("Cycle {}", self.cycle_count);
 
         print!("  {}", instruction.mnemonic);
         if instruction.length_in_bytes > 1 {
@@ -122,15 +128,13 @@ impl<'a> CPU<'a> {
     }
 
     fn run_op(&mut self) {
-        println!("Cycle {}", self.cycle_count);
         let opcode = self.pop_u8_from_pc();
-        print!("OP: {:02X}", opcode);
 
         let instruction = &self.instruction_vector[opcode as usize];
         let implementation = instruction.implementation;
         let cycles_before_op = self.cycle_count;
 
-        self.print_instruction(opcode, false);
+        if self.debug { self.print_instruction(opcode, false) };
         implementation(self);
 
         for _i in cycles_before_op..self.cycle_count {
@@ -140,18 +144,19 @@ impl<'a> CPU<'a> {
 
     fn run_cb_op(&mut self) {
         let opcode = self.pop_u8_from_pc();
-        print!("CB OP: {:02X}", opcode);
 
         let instruction = &self.cb_instruction_vector[opcode as usize];
         let implementation = instruction.implementation;
 
-        self.print_instruction(opcode, true);
+        if self.debug { self.print_instruction(opcode, true) };
         implementation(self);
     }
 
     pub fn step(&mut self) {
-        println!();
-        println!("PC: {:02X}", self.program_counter.read());
+        if self.debug {
+            println!();
+            println!("PC: {:02X}", self.program_counter.read());
+        }
         self.run_op()
     }
 }

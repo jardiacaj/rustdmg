@@ -6,7 +6,7 @@ use std::io;
 use crate::ppu::PPU;
 
 pub struct DMG<'a> {
-    cpu: CPU<'a>,
+    pub cpu: CPU<'a>,
 }
 
 impl<'a> DMG<'a> {

@@ -26,7 +26,7 @@ pub struct IOPorts {
 impl MemoryZone for IOPorts {
     fn read(&self, address: u16) -> u8 {
         match address {
-            IO_LCD_Y_COORDINATE => { println!("{}", self.ppu.borrow().current_line); self.ppu.borrow().current_line }
+            IO_LCD_Y_COORDINATE => { self.ppu.borrow().current_line }
             IO_LCD_SCROLL_Y => { self.ppu.borrow().bg_scroll_y }
             _ => {panic!("Reading from IO address {:04X}", address);}
         }
