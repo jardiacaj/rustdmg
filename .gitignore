@@ -2,4 +2,6 @@
 **/*.rs.bk
 *.gb
 *.bin
-
+perf.data*
+rust-unmangle
+flame.svg
