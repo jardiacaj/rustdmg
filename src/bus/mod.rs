@@ -225,4 +225,12 @@ mod tests {
         bus.video_ram.data[0x12] = 0xFF;
         assert_eq!(bus.get_memory_zone_from_address(0x8012).read(0x8012), 0xFF);
     }
+
+    #[test]
+    fn read_ff44_lcdc_y_coordinate() {
+        let mut bus = Bus::new_from_vecs(vec![], vec![]);
+        bus.ppu.borrow_mut().current_line = 123;
+        assert_eq!(bus.read(0xFF44), 123);
+
+    }
 }
