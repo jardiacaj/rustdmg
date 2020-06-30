@@ -1,7 +1,7 @@
 pub mod cartridge;
 pub mod bootrom;
 
-use std::cell::{RefCell, RefMut};
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use cartridge::Cartridge;
@@ -170,7 +170,7 @@ impl Bus {
         }
     }
 
-    pub fn new_from_vecs(boot_rom_data: Vec<u8>, cart_rom_bank_zero_data: Vec<u8>) -> Bus {
+    pub fn new_from_vecs(boot_rom_data: Vec<u8>, _cart_rom_bank_zero_data: Vec<u8>) -> Bus {
         let boot_rom = BootROM{data: boot_rom_data};
         let ppu: PPU = PPU::new();
         let ppu_ref = Rc::new(RefCell::new(ppu));

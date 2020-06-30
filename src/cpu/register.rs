@@ -79,7 +79,7 @@ impl DMGRegister for AFRegister {
         self.flags.bits = value as u8;
     }
     fn inc(&mut self) { panic!("Called inc on AF register") }
-    fn overflowing_add(&mut self, value: u16) { panic!() }
+    fn overflowing_add(&mut self, _value: u16) { panic!() }
     fn read_lower(&self) -> u8 { self.flags.bits }
     fn write_lower(&mut self, value: u8) { self.flags.bits = value; }
     fn read_higher(&self) -> u8 { self.a }

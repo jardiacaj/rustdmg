@@ -26,7 +26,7 @@ impl BootROM {
 
 impl MemoryZone for BootROM {
     fn read(&self, address: u16) -> u8 { self.data[address as usize] }
-    fn write(&mut self, address: u16, value: u8) { panic!("Trying to write to boot ROM"); }
+    fn write(&mut self, _address: u16, _value: u8) { panic!("Trying to write to boot ROM"); }
 }
 
 #[cfg(test)]
@@ -42,7 +42,7 @@ mod tests {
 
     #[test]
     fn read() {
-        let mut bootrom = BootROM{data:vec![123, 234]};
+        let bootrom = BootROM{data:vec![123, 234]};
         assert_eq!(bootrom.read(1), 234);
     }
 }

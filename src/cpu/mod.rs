@@ -2,7 +2,6 @@ pub mod register;
 pub mod instruction;
 
 use super::bus::Bus;
-use super::bus::MemoryZone;
 use register::*;
 use instruction::*;
 
@@ -97,7 +96,7 @@ impl CPU {
         self.print_instruction(instruction, false);
         implementation(self);
 
-        for i in (cycles_before_op..self.cycle_count) {
+        for _i in cycles_before_op..self.cycle_count {
             self.bus.cycle();
         }
     }

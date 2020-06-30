@@ -1,8 +1,6 @@
 use super::CPU;
 use super::Flags;
-use crate::bus::MemoryZone;
 use crate::cpu::register::DMGRegister;
-use crate::cpu::register::Subregister;
 
 macro_rules! push {
     ($opcode:literal, $register:ident, $register_name:expr) => (
@@ -293,7 +291,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 128] = [
         implementation: |cpu| cpu.cycle_count += 4 },
     Instruction{opcode: 0x01, mnemonic: "LD BC,d16", description: "Load immediate to BC",
         length_in_bytes: 3, cycles: "12", flags_changed: "",
-        implementation: |cpu| panic!("Not implemented") },
+        implementation: |_cpu| panic!("Not implemented") },
     ld_pointer_register!(0x02, reg_bc, "BC", reg_af, read_higher, "A"),
     inc_u16!(0x03, reg_bc, "BC"),
     inc_u8!(0x04, reg_bc, write_higher, read_higher, "B"),
@@ -554,10 +552,7 @@ mod tests {
     use super::CPU;
     use super::Flags;
     use crate::bus::Bus;
-    use crate::bus::MemoryZone;
     use crate::cpu::register::DMGRegister;
-    use crate::cpu::register::Subregister;
-    use bitflags::_core::num::FpCategory::Subnormal;
 
     #[test]
     fn xor_a() {

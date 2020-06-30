@@ -123,7 +123,7 @@ impl Cartridge {
 
         let name = match str::from_utf8(&blob[0x0134..0x0142]) {
             Ok(v) => v.to_string(),
-            Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid UTF8 in ROM name")),
+            Err(_) => return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid UTF8 in ROM name")),
         };
 
         let cartridge = Cartridge {
