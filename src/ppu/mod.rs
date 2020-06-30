@@ -29,6 +29,7 @@ fn next_mode(mode: &PpuMode, current_line: u8) -> PpuMode {
 pub struct PPU {
     pub cycle_count: u64,
     pub current_line: u8,
+    pub bg_scroll_y: u8,
     current_mode: PpuMode,
     cycles_in_current_mode: u16,
     cycles_in_current_line: u16,
@@ -39,6 +40,7 @@ impl PPU {
         PPU {
             cycle_count: 0,
             current_line: 0,
+            bg_scroll_y: 0,
             current_mode: PpuMode::OAM, // FIXME CONFIRM
             cycles_in_current_mode: 0,
             cycles_in_current_line: 0,

@@ -27,6 +27,7 @@ impl MemoryZone for IOPorts {
     fn read(&self, address: u16) -> u8 {
         match address {
             IO_LCD_Y_COORDINATE => { self.ppu.borrow().current_line }
+            IO_LCD_SCROLL_Y => { self.ppu.borrow().bg_scroll_y }
             _ => {panic!("Reading from IO address {:04X}", address);}
         }
         // self.data[self.global_address_to_local_address(address) as usize]
@@ -41,7 +42,7 @@ impl MemoryZone for IOPorts {
             IO_SOUND_CH1_FREQUENCY_HI_NR14 => { println!("Not implemented"); }
             IO_SOUND_OUTPUT_TERMINAL_NR51 => { println!("Not implemented"); }
             IO_LDC_BG_PALETTE_DATA => { println!("Not implemented"); }
-            IO_LCD_SCROLL_Y => { println!("Not implemented"); }
+            IO_LCD_SCROLL_Y => { self.ppu.borrow_mut().bg_scroll_y = value; }
             IO_LCD_CONTROL => { println!("Not implemented"); }
             _ => {panic!("Writing to IO: address {:04X} value {:02X}", address, value);}
         }
@@ -58,5 +59,31 @@ impl IOPorts {
             data: vec![0; IO_PORTS_SIZE as usize], 
             ppu,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn read_ff44_lcdc_y_coordinate() {
+        let mut bus = Bus::new_from_vecs(vec![], vec![]);
+        bus.ppu.borrow_mut().current_line = 123;
+        assert_eq!(bus.read(0xFF44), 123);
+    }
+
+    #[test]
+    fn read_ff42_scx_scroll_y() {
+        let mut bus = Bus::new_from_vecs(vec![], vec![]);
+        bus.ppu.borrow_mut().bg_scroll_y = 123;
+        assert_eq!(bus.read(0xFF42), 123);
+    }
+
+    #[test]
+    fn write_ff42_scx_scroll_y() {
+        let mut bus = Bus::new_from_vecs(vec![], vec![]);
+        bus.write(0xFF42, 123);
+        assert_eq!(bus.ppu.borrow().bg_scroll_y, 123);
     }
 }
