@@ -16,7 +16,7 @@ const ROM_BANK_SIZE: usize = 0x4000;
 const BOOT_ROM_SIZE: usize = 256;
 const HIGH_RAM_BANK_SIZE: u16 = 0x007F;
 const HIGH_RAM_BASE_ADDRESS: u16 = 0xFF80;
-const WORK_RAM_BANK_SIZE: u16 = 0x1000;
+const WORK_RAM_BANK_SIZE: u16 = 0x2000;
 const WORK_RAM_BASE_ADDRESS: u16 = 0xC000;
 const VIDEO_RAM_SIZE: u16 = 0x2000;
 const VIDEO_RAM_BASE_ADDRESS: u16 = 0x8000;
@@ -124,7 +124,7 @@ impl Bus {
         if address < (ROM_BANK_SIZE * 2) as u16 { panic!("Rom banking not implemented"); };
         if address < 0xA000 { return Box::new(&mut self.video_ram); };
         if address < 0xC000 { panic!("External ram not implemented"); };
-        if address < 0xD000 { return Box::new(&mut self.work_ram); };
+        if address < 0xE000 { return Box::new(&mut self.work_ram); };
         if address >= IO_PORTS_BASE_ADDRESS && address < IO_PORTS_BASE_ADDRESS + IO_PORTS_SIZE {
             return Box::new(&mut self.io_ports);
         }
