@@ -47,6 +47,7 @@ impl DMGRegister for Register16bit {
 }
 
 bitflags! {
+    #[derive(Default)]
     pub struct Flags: u8 {
         const Z = 0b10000000;
         const N = 0b01000000;

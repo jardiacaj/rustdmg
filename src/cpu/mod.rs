@@ -173,7 +173,6 @@ impl<'a> CPU<'a> {
 #[cfg(test)]
 mod tests {
     use super::CPU;
-    use super::Flags;
     use crate::bus::Bus;
     use crate::cpu::register::DMGRegister;
 
