@@ -137,10 +137,6 @@ impl<'a> CPU<'a> {
             instruction = &self.instruction_vector[self.reg_instruction as usize];
             print!("OP: {:02X}", instruction.opcode);
         }
-        let data_address_offset: u16 = match self.reg_instruction_is_cb {
-            true => 2,
-            false => 1,
-        };
 
         print!(" -- {}", instruction.mnemonic);
 
@@ -148,10 +144,10 @@ impl<'a> CPU<'a> {
             print!(" -- ");
         }
         if instruction.length_in_bytes == 3 {
-            print!("{:02X}", self.bus.read(self.instruction_address + data_address_offset + 1));
+            print!("{:02X}", self.bus.read(self.instruction_address + 2));
         }
         if instruction.length_in_bytes > 1 {
-            print!("{:02X}", self.bus.read(self.instruction_address + data_address_offset));
+            print!("{:02X}", self.bus.read(self.instruction_address + 1));
         }
         println!();
     }
