@@ -23,6 +23,12 @@ pub struct CPU <'a> {
     instruction_address: u16,
 }
 
+impl<'a> Drop for CPU <'a> {
+    fn drop(&mut self) {
+        self.dump();
+    }
+}
+
 impl<'a> CPU<'a> {
     pub fn new(bus: Bus) -> CPU<'a> {
         let mut instruction_vector = vec!();
@@ -103,9 +109,27 @@ impl<'a> CPU<'a> {
         ((self.pop_u8_from_stack() as u16) << 8) | (self.pop_u8_from_stack() as u16)
     }
 
+    fn dump(&mut self) {
+        println!("### DUMP ###");
+        println!("Cycles ran {}", self.cycle_count);
+        println!("AF {:04X}", self.reg_af.read());
+        println!("BC {:04X}", self.reg_bc.read());
+        println!("DE {:04X}", self.reg_de.read());
+        println!("HL {:04X}", self.reg_hl.read());
+        println!("SP {:04X}", self.stack_pointer.read());
+        println!("PC {:04X}", self.program_counter.read());
+        self.print_instruction();
+        println!("### END ###");
+        println!();
+    }
+
     // FIXME makes assumptions on PC
     fn print_instruction(&mut self) {
         let instruction: &Instruction;
+
+        println!();
+        println!("PC: {:02X}", self.instruction_address);
+
         if self.reg_instruction_is_cb {
             instruction = &self.cb_instruction_vector[self.reg_instruction as usize];
             print!("CB OP: {:02X}", instruction.opcode);
@@ -114,8 +138,8 @@ impl<'a> CPU<'a> {
             print!("OP: {:02X}", instruction.opcode);
         }
         let data_address_offset: u16 = match self.reg_instruction_is_cb {
-            true => 1,
-            false => 0,
+            true => 2,
+            false => 1,
         };
 
         print!(" -- {}", instruction.mnemonic);
@@ -124,13 +148,12 @@ impl<'a> CPU<'a> {
             print!(" -- ");
         }
         if instruction.length_in_bytes == 3 {
-            print!("{:02X}", self.bus.read(self.program_counter.read() + data_address_offset + 1));
+            print!("{:02X}", self.bus.read(self.instruction_address + data_address_offset + 1));
         }
         if instruction.length_in_bytes > 1 {
-            print!("{:02X}", self.bus.read(self.program_counter.read() + data_address_offset));
+            print!("{:02X}", self.bus.read(self.instruction_address + data_address_offset));
         }
         println!();
-        println!("Cycle {}", self.cycle_count);
     }
 
     fn run_op(&mut self) {
@@ -162,10 +185,6 @@ impl<'a> CPU<'a> {
     }
 
     pub fn step(&mut self) {
-        if self.debug {
-            println!();
-            println!("PC: {:02X}", self.program_counter.read());
-        }
         self.run_op()
     }
 }
