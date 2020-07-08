@@ -88,8 +88,12 @@ pub struct Cartridge {
 }
 
 impl Cartridge {
-    pub fn new_dummy_cartridge() -> Cartridge {
-        Cartridge {name: "".to_string(), blob: vec![], rom_banks: vec![]}
+    pub fn new_dummy_cartridge(data: Vec<u8>) -> Cartridge {
+        let rom_bank_zero = RomBank {
+            bank_number: 0,
+            data
+        };
+        Cartridge {name: "".to_string(), blob: vec![], rom_banks: vec![rom_bank_zero]}
     }
 
     pub fn read_cartridge_from_romfile(rom_file_path: &str) -> io::Result<Cartridge> {

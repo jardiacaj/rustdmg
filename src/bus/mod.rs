@@ -57,6 +57,7 @@ impl Bus {
         self.get_memory_zone_from_address(address).read(address)
     }
     pub fn write(&mut self, address: u16, value: u8) {
+        if address == 0xFF50 && value == 1 { self.boot_rom_active = false };
         self.get_memory_zone_from_address(address).write(address, value)
     }
 
@@ -100,7 +101,7 @@ impl Bus {
         }
     }
 
-    pub fn new_from_vecs(boot_rom_data: Vec<u8>, _cart_rom_bank_zero_data: Vec<u8>) -> Bus {
+    pub fn new_from_vecs(boot_rom_data: Vec<u8>, cart_rom_bank_zero_data: Vec<u8>) -> Bus {
         let boot_rom = BootROM{data: boot_rom_data};
         let ppu: PPU = PPU::new();
         let ppu_ref = Rc::new(RefCell::new(ppu));
@@ -108,7 +109,7 @@ impl Bus {
         Bus {
             boot_rom_active: true,
             boot_rom,
-            cartridge: Cartridge::new_dummy_cartridge(),
+            cartridge: Cartridge::new_dummy_cartridge(cart_rom_bank_zero_data),
             work_ram: Bus::new_work_ram(),
             video_ram: Bus::new_video_ram(),
             io_ports,
@@ -161,6 +162,17 @@ mod tests {
         let mut bus = Bus::new_from_vecs(vec![], vec![]);
         bus.ppu.borrow_mut().current_line = 123;
         assert_eq!(bus.read(0xFF44), 123);
+
+    }
+
+    #[test]
+    fn write_ff50_disable_boot_rom() {
+        let mut bus = Bus::new_from_vecs(vec![0x12], vec![0x34]);
+        assert_eq!(bus.read(0x0000), 0x12);
+        assert_eq!(bus.boot_rom_active, true);
+        bus.write(0xFF50, 1);
+        assert_eq!(bus.boot_rom_active, false);
+        assert_eq!(bus.read(0x0000), 0x34);
 
     }
 }

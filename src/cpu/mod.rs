@@ -23,12 +23,6 @@ pub struct CPU <'a> {
     instruction_address: u16,
 }
 
-impl<'a> Drop for CPU <'a> {
-    fn drop(&mut self) {
-        self.dump();
-    }
-}
-
 impl<'a> CPU<'a> {
     pub fn new(bus: Bus) -> CPU<'a> {
         let mut instruction_vector = vec!();
@@ -39,7 +33,7 @@ impl<'a> CPU<'a> {
                 instruction_vector.push(
                     Instruction{opcode: instruction_vector.len() as u8, mnemonic: "NOT IMPLEMENTED", description: "NOT IMPLEMENTED",
                         length_in_bytes: 1, cycles: "0", flags_changed: "",
-                        implementation: |cpu| { cpu.print_instruction(); panic!("Bad opcode!") }
+                        implementation: |cpu| { cpu.dump(); panic!("Bad opcode!") }
                     }
                 )
             }
@@ -51,7 +45,7 @@ impl<'a> CPU<'a> {
                 cb_instruction_vector.push(
                     Instruction{opcode: cb_instruction_vector.len() as u8, mnemonic: "NOT IMPLEMENTED", description: "NOT IMPLEMENTED",
                         length_in_bytes: 1, cycles: "0", flags_changed: "",
-                        implementation: |cpu| { cpu.print_instruction(); panic!("Bad CB opcode!") }
+                        implementation: |cpu| { cpu.dump(); panic!("Bad CB opcode!") }
                     }
                 )
             }
@@ -161,7 +155,7 @@ impl<'a> CPU<'a> {
         let implementation = instruction.implementation;
         let cycles_before_op = self.cycle_count;
 
-        if self.debug { self.print_instruction() };
+        if self.debug && self.reg_instruction != 0xCB { self.print_instruction() };
         implementation(self);
 
         for _i in cycles_before_op..self.cycle_count {
@@ -170,6 +164,7 @@ impl<'a> CPU<'a> {
     }
 
     fn run_cb_op(&mut self) {
+        self.instruction_address = self.program_counter.read();
         self.reg_instruction = self.pop_u8_from_pc();
         self.reg_instruction_is_cb = true;
 
@@ -204,7 +199,7 @@ mod tests {
         assert_eq!(cpu.reg_instruction, 0xAF);
         cpu.step();
         assert_eq!(cpu.program_counter.read(), 0x0003);
-        assert_eq!(cpu.instruction_address, 0x0001);
+        assert_eq!(cpu.instruction_address, 0x0002);
         assert_eq!(cpu.reg_instruction_is_cb, true);
         assert_eq!(cpu.reg_instruction, 0x7C);
     }

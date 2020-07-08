@@ -295,6 +295,48 @@ macro_rules! jump_relative {
     )
 }
 
+macro_rules! jump {
+    ($opcode: literal, $flag:expr, $true_or_false:literal, $condition_text:literal) => (
+        Instruction{opcode: $opcode,
+            mnemonic: concat!("JP ", $condition_text, ", d16"),
+            description: concat!("Jump if ", $condition_text),
+            length_in_bytes: 3, cycles: "12", flags_changed: "----",
+            implementation: |cpu| {
+                let jump_address = cpu.pop_u16_from_pc();
+                if cpu.reg_af.flags.contains($flag) == $true_or_false {
+                    cpu.cycle_count += 16;
+                    cpu.program_counter.write(jump_address);
+                } else {
+                    cpu.cycle_count += 12;
+                }
+            }
+        }
+    );
+    ($opcode: literal) => (
+        Instruction{opcode: $opcode,
+            mnemonic: concat!("JP d16"),
+            description: concat!("Jump"),
+            length_in_bytes: 3, cycles: "12", flags_changed: "----",
+            implementation: |cpu| {
+                let jump_address = cpu.pop_u16_from_pc();
+                cpu.cycle_count += 12;
+                cpu.program_counter.write(jump_address);
+            }
+        }
+    );
+    ($opcode: literal, hl) => (
+        Instruction{opcode: $opcode,
+            mnemonic: concat!("JP (HL))"),
+            description: concat!("Jump (HL)"),
+            length_in_bytes: 1, cycles: "4", flags_changed: "----",
+            implementation: |cpu| {
+                cpu.cycle_count += 4;
+                cpu.program_counter.write(cpu.bus.read(cpu.reg_hl.read()) as u16);
+            }
+        }
+    )
+}
+
 fn set_cpu_flags_for_add(cpu: &mut CPU, value: u8) {
     let a = cpu.reg_af.read_a();
     cpu.reg_af.flags.set(Flags::Z, a.overflowing_add(value).0 == 0);
@@ -450,7 +492,7 @@ macro_rules! cp {
 }
 
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 154] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 160] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -630,6 +672,8 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 154] = [
     cp!(0xBF, reg_af, read_a, "A"),
 
     pop!(0xC1, reg_bc, "BC"),
+    jump!(0xC2, Flags::Z, false, "NZ"),
+    jump!(0xC3),
     push!(0xC5, reg_bc, "BC"),
     add!(0xC6, immediate),
 
@@ -640,6 +684,8 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 154] = [
             let new_pc = cpu.pop_u16_from_stack();
             cpu.program_counter.write(new_pc);
         } },
+
+    jump!(0xCA, Flags::Z, true, "Z"),
 
     Instruction{opcode: 0xCB, mnemonic: "CB", description: "CB prefix",
         length_in_bytes: 0, cycles: "0", flags_changed: "",
@@ -655,8 +701,10 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 154] = [
         } },
 
     pop!(0xD1, reg_de, "DE"),
+    jump!(0xD2, Flags::C, false, "NC"),
     push!(0xD5, reg_de, "DE"),
     sub!(0xD6, immediate),
+    jump!(0xDA, Flags::C, true, "C"),
 
     Instruction{opcode: 0xE0, mnemonic: "LD ($FF00+imm), A", description: "Put A to pointer 0xFF00 + immediate",
         length_in_bytes: 2, cycles: "12", flags_changed: "",
@@ -677,6 +725,8 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 154] = [
         } },
 
     push!(0xE5, reg_hl, "HL"),
+
+    jump!(0xE9, hl),
 
     Instruction{opcode: 0xEA, mnemonic: "LD (a16), A", description: "Load A to immediate pointer",
         length_in_bytes: 3, cycles: "16", flags_changed: "----",
@@ -1266,6 +1316,95 @@ mod tests {
         assert!(!cpu.reg_af.flags.contains(Flags::N));
         assert!(cpu.reg_af.flags.contains(Flags::H));
         assert!(cpu.reg_af.flags.contains(Flags::Z));
+    }
+
+    #[test]
+    fn jump() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xC3, 0x12, 0x34], vec![]));
+        cpu.step();
+        assert_eq!(cpu.program_counter.read(), 0x3412);
+        assert_eq!(cpu.cycle_count, 12);
+    }
+
+    #[test]
+    fn jpnz() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xC2, 0x12, 0x34], vec![]));
+        cpu.reg_af.flags.set(Flags::Z, false);
+        cpu.step();
+        assert_eq!(cpu.program_counter.read(), 0x3412);
+        assert_eq!(cpu.cycle_count, 16);
+    }
+
+    #[test]
+    fn jpnz_no_jump() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xC2, 0x12, 0x34], vec![]));
+        cpu.reg_af.flags.set(Flags::Z, true);
+        cpu.step();
+        assert_eq!(cpu.program_counter.read(), 0x0003);
+        assert_eq!(cpu.cycle_count, 12);
+    }
+
+    #[test]
+    fn jpz() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xCA, 0x12, 0x34], vec![]));
+        cpu.reg_af.flags.set(Flags::Z, true);
+        cpu.step();
+        assert_eq!(cpu.program_counter.read(), 0x3412);
+        assert_eq!(cpu.cycle_count, 16);
+    }
+
+    #[test]
+    fn jpz_no_jump() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xCA, 0x12, 0x34], vec![]));
+        cpu.reg_af.flags.set(Flags::Z, false);
+        cpu.step();
+        assert_eq!(cpu.program_counter.read(), 0x0003);
+        assert_eq!(cpu.cycle_count, 12);
+    }
+
+    #[test]
+    fn jpnc() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xD2, 0x12, 0x34], vec![]));
+        cpu.reg_af.flags.set(Flags::C, false);
+        cpu.step();
+        assert_eq!(cpu.program_counter.read(), 0x3412);
+        assert_eq!(cpu.cycle_count, 16);
+    }
+
+    #[test]
+    fn jpnc_no_jump() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xD2, 0x12, 0x34], vec![]));
+        cpu.reg_af.flags.set(Flags::C, true);
+        cpu.step();
+        assert_eq!(cpu.program_counter.read(), 0x0003);
+        assert_eq!(cpu.cycle_count, 12);
+    }
+
+    #[test]
+    fn jpc() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xDA, 0x12, 0x34], vec![]));
+        cpu.reg_af.flags.set(Flags::C, true);
+        cpu.step();
+        assert_eq!(cpu.program_counter.read(), 0x3412);
+        assert_eq!(cpu.cycle_count, 16);
+    }
+
+    #[test]
+    fn jpc_no_jump() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xDA, 0x12, 0x34], vec![]));
+        cpu.reg_af.flags.set(Flags::C, false);
+        cpu.step();
+        assert_eq!(cpu.program_counter.read(), 0x0003);
+        assert_eq!(cpu.cycle_count, 12);
+    }
+
+    #[test]
+    fn jp_hl() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xE9, 0x12, 0x34], vec![]));
+        cpu.reg_hl.write(0x0002);
+        cpu.step();
+        assert_eq!(cpu.program_counter.read(), 0x34);
+        assert_eq!(cpu.cycle_count, 4);
     }
 
     #[test]

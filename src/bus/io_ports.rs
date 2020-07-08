@@ -18,6 +18,9 @@ const IO_LCD_SCROLL_Y: u16 = 0xFF42;
 const IO_LCD_Y_COORDINATE: u16 = 0xFF44;
 const IO_LDC_BG_PALETTE_DATA: u16 = 0xFF47;
 
+const IO_BOOT_ROM_CONTROL: u16 = 0xFF50;
+
+
 pub struct IOPorts {
     pub data: Vec<u8>,
     ppu: Rc<RefCell<PPU>>,
@@ -44,6 +47,7 @@ impl MemoryZone for IOPorts {
             IO_LDC_BG_PALETTE_DATA => { println!("Not implemented"); }
             IO_LCD_SCROLL_Y => { self.ppu.borrow_mut().bg_scroll_y = value; }
             IO_LCD_CONTROL => { println!("Not implemented"); }
+            IO_BOOT_ROM_CONTROL => { if value != 1 { panic!("0xFF50 only allows writes of 1")} } // HAPPY CASE HANDLED BY BUS
             _ => {panic!("Writing to IO: address {:04X} value {:02X}", address, value);}
         }
         let local_address = self.global_address_to_local_address(address) as usize;
