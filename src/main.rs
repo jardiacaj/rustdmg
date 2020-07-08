@@ -1,5 +1,4 @@
 use std::env;
-use std::io;
 use rustdmg::dmg;
 
 
@@ -19,6 +18,6 @@ fn main() {
     }
 
     let mut dmg = dmg::DMG::new(&rom_file_path.unwrap()).unwrap();
-    dmg.cpu.debug = false;
+    dmg.cpu.debug = debug;
     dmg.run();
 }

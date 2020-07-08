@@ -351,8 +351,50 @@ macro_rules! sub {
     )
 }
 
+macro_rules! cp {
+    ($opcode:literal, $register:ident, $read_method:ident, $register_name:expr) => (
+        Instruction{
+            opcode: $opcode,
+            mnemonic: concat!("CP ", $register_name),
+            description: concat!("Compare ", $register_name, " with A"),
+            length_in_bytes: 1, cycles: "4", flags_changed: "Z1HC",
+            implementation: |cpu| {
+                let subtrahend = cpu.$register.$read_method();
+                set_cpu_flags_for_sub_or_cp(cpu, subtrahend);
+                cpu.cycle_count += 4;
+            }
+        }
+    );
+    ($opcode:literal, hl) => (
+        Instruction{
+            opcode: $opcode,
+            mnemonic: concat!("CP (HL)"),
+            description: concat!("Compare (HL) with A"),
+            length_in_bytes: 1, cycles: "8", flags_changed: "Z1HC",
+            implementation: |cpu| {
+                let subtrahend = cpu.bus.read(cpu.reg_hl.read());
+                set_cpu_flags_for_sub_or_cp(cpu, subtrahend);
+                cpu.cycle_count += 8;
+            }
+        }
+    );
+    ($opcode:literal, immediate) => (
+        Instruction{
+            opcode: $opcode,
+            mnemonic: concat!("CP d8"),
+            description: concat!("Compare immediate with A"),
+            length_in_bytes: 2, cycles: "8", flags_changed: "Z1HC",
+            implementation: |cpu| {
+                let subtrahend = cpu.pop_u8_from_pc();
+                set_cpu_flags_for_sub_or_cp(cpu, subtrahend);
+                cpu.cycle_count += 8;
+            }
+        }
+    )
+}
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 137] = [
+
+pub const INSTRUCTIONS_NOCB: [Instruction; 145] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -511,6 +553,16 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 137] = [
             cpu.reg_af.write_a(0);
             cpu.reg_af.flags.insert(Flags::Z);
         } },
+    
+
+    cp!(0xB8, reg_bc, read_higher, "B"),
+    cp!(0xB9, reg_bc, read_lower, "C"),
+    cp!(0xBA, reg_de, read_higher, "D"),
+    cp!(0xBB, reg_de, read_lower, "E"),
+    cp!(0xBC, reg_hl, read_higher, "H"),
+    cp!(0xBD, reg_hl, read_lower, "L"),
+    cp!(0xBE, hl),
+    cp!(0xBF, reg_af, read_a, "A"),
 
     pop!(0xC1, reg_bc, "BC"),
     push!(0xC5, reg_bc, "BC"),
@@ -579,13 +631,7 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 137] = [
     pop!(0xF1, reg_af, "AF"),
     push!(0xF5, reg_af, "AF"),
 
-    Instruction{opcode: 0xFE, mnemonic: "CP d8", description: "Compare A with immediate",
-        length_in_bytes: 2, cycles: "8", flags_changed: "Z1HC",
-        implementation: |cpu| {
-            cpu.cycle_count += 8;
-            let immediate = cpu.pop_u8_from_pc();
-            set_cpu_flags_for_sub_or_cp(cpu, immediate);
-        } },
+    cp!(0xFE, immediate),
 ];
 
 pub const INSTRUCTIONS_CB: [Instruction; 8] = [
@@ -1555,6 +1601,93 @@ mod tests {
 
     #[test]
     fn cp_a_zero() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xBF], vec![]));
+        cpu.reg_af.write_higher(0x10);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 4);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.reg_af.flags, Flags::Z | Flags::N);
+    }
+
+    #[test]
+    fn cp_b_half_carry() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xB8], vec![]));
+        cpu.reg_af.write_higher(0x13);
+        cpu.reg_bc.write_higher(0x04);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 4);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.reg_af.flags, Flags::N | Flags::H);
+    }
+
+    #[test]
+    fn cp_c_no_carry() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xB9], vec![]));
+        cpu.reg_af.write_higher(0x11);
+        cpu.reg_bc.write_lower(0x10);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 4);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.reg_af.flags, Flags::N);
+    }
+
+    #[test]
+    fn cp_d_carry() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xBA], vec![]));
+        cpu.reg_af.write_higher(0x05);
+        cpu.reg_de.write_higher(0x06);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 4);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.reg_af.flags, Flags::C | Flags::H | Flags::N);
+    }
+
+    #[test]
+    fn cp_e_half_carry() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xBB], vec![]));
+        cpu.reg_af.write_higher(0x13);
+        cpu.reg_de.write_lower(0x04);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 4);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.reg_af.flags, Flags::N | Flags::H);
+    }
+
+    #[test]
+    fn cp_h_no_carry() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xBC], vec![]));
+        cpu.reg_af.write_higher(0x11);
+        cpu.reg_hl.write_higher(0x10);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 4);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.reg_af.flags, Flags::N);
+    }
+
+    #[test]
+    fn cp_l_carry() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xBD], vec![]));
+        cpu.reg_af.write_higher(0x05);
+        cpu.reg_hl.write_lower(0x06);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 4);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.reg_af.flags, Flags::C | Flags::H | Flags::N);
+    }
+
+    #[test]
+    fn cp_hl_carry() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xBE, 0x06], vec![]));
+        cpu.reg_af.write_higher(0x05);
+        cpu.reg_hl.write(0x0001);
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 8);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.reg_af.flags, Flags::C | Flags::H | Flags::N);
+    }
+
+    #[test]
+    fn cp_immediate_zero() {
         let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xFE, 0x10], vec![]));
         cpu.reg_af.write_higher(0x10);
         cpu.step();
@@ -1564,7 +1697,7 @@ mod tests {
     }
 
     #[test]
-    fn cp_a_half_carry() {
+    fn cp_immediate_half_carry() {
         let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xFE, 0x9], vec![]));
         cpu.reg_af.write_higher(0x10);
         cpu.step();
@@ -1574,7 +1707,7 @@ mod tests {
     }
 
     #[test]
-    fn cp_a_no_carry() {
+    fn cp_immediate_no_carry() {
         let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xFE, 0x1], vec![]));
         cpu.reg_af.write_higher(0x11);
         cpu.step();
@@ -1584,7 +1717,7 @@ mod tests {
     }
 
     #[test]
-    fn cp_a_carry() {
+    fn cp_immediate_carry() {
         let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xFE, 0x11], vec![]));
         cpu.reg_af.write_higher(0x10);
         cpu.step();

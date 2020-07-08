@@ -112,9 +112,8 @@ impl<'a> CPU<'a> {
             false => 0,
         };
 
-        println!("Cycle {}", self.cycle_count);
+        print!(" -- {}", instruction.mnemonic);
 
-        print!("  {}", instruction.mnemonic);
         if instruction.length_in_bytes > 1 {
             print!(" -- ");
         }
@@ -125,6 +124,7 @@ impl<'a> CPU<'a> {
             print!("{:02X}", self.bus.read(self.program_counter.read() - neg_offset));
         }
         println!();
+        println!("Cycle {}", self.cycle_count);
     }
 
     fn run_op(&mut self) {
