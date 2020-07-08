@@ -18,6 +18,9 @@ pub struct CPU <'a> {
     pub instruction_vector: Vec<Instruction<'a>>, // FIXME this should be removed when all instructions are implemented
     pub cb_instruction_vector: Vec<Instruction<'a>>, // FIXME this should be removed when all instructions are implemented
     pub debug: bool,
+    reg_instruction: u8,
+    reg_instruction_is_cb: bool,
+    instruction_address: u16,
 }
 
 impl<'a> CPU<'a> {
@@ -30,7 +33,7 @@ impl<'a> CPU<'a> {
                 instruction_vector.push(
                     Instruction{opcode: instruction_vector.len() as u8, mnemonic: "NOT IMPLEMENTED", description: "NOT IMPLEMENTED",
                         length_in_bytes: 1, cycles: "0", flags_changed: "",
-                        implementation: |_cpu| { panic!("Bad opcode!") }
+                        implementation: |cpu| { cpu.print_instruction(); panic!("Bad opcode!") }
                     }
                 )
             }
@@ -42,7 +45,7 @@ impl<'a> CPU<'a> {
                 cb_instruction_vector.push(
                     Instruction{opcode: cb_instruction_vector.len() as u8, mnemonic: "NOT IMPLEMENTED", description: "NOT IMPLEMENTED",
                         length_in_bytes: 1, cycles: "0", flags_changed: "",
-                        implementation: |_cpu| { panic!("Bad CB opcode!") }
+                        implementation: |cpu| { cpu.print_instruction(); panic!("Bad CB opcode!") }
                     }
                 )
             }
@@ -61,6 +64,9 @@ impl<'a> CPU<'a> {
             instruction_vector,
             cb_instruction_vector,
             debug: false,
+            reg_instruction: 0,
+            reg_instruction_is_cb: false,
+            instruction_address: 0,
         }
     }
 
@@ -98,16 +104,16 @@ impl<'a> CPU<'a> {
     }
 
     // FIXME makes assumptions on PC
-    fn print_instruction(&mut self, opcode: u8, is_cb: bool) {
+    fn print_instruction(&mut self) {
         let instruction: &Instruction;
-        if is_cb {
-            instruction = &self.cb_instruction_vector[opcode as usize];
-            print!("CB OP: {:02X}", opcode);
+        if self.reg_instruction_is_cb {
+            instruction = &self.cb_instruction_vector[self.reg_instruction as usize];
+            print!("CB OP: {:02X}", instruction.opcode);
         } else {
-            instruction = &self.instruction_vector[opcode as usize];
-            print!("OP: {:02X}", opcode);
+            instruction = &self.instruction_vector[self.reg_instruction as usize];
+            print!("OP: {:02X}", instruction.opcode);
         }
-        let neg_offset: u16 = match is_cb {
+        let data_address_offset: u16 = match self.reg_instruction_is_cb {
             true => 1,
             false => 0,
         };
@@ -118,23 +124,25 @@ impl<'a> CPU<'a> {
             print!(" -- ");
         }
         if instruction.length_in_bytes == 3 {
-            print!("{:02X}", self.bus.read(self.program_counter.read() - neg_offset + 1));
+            print!("{:02X}", self.bus.read(self.program_counter.read() + data_address_offset + 1));
         }
         if instruction.length_in_bytes > 1 {
-            print!("{:02X}", self.bus.read(self.program_counter.read() - neg_offset));
+            print!("{:02X}", self.bus.read(self.program_counter.read() + data_address_offset));
         }
         println!();
         println!("Cycle {}", self.cycle_count);
     }
 
     fn run_op(&mut self) {
-        let opcode = self.pop_u8_from_pc();
+        self.instruction_address = self.program_counter.read();
+        self.reg_instruction = self.pop_u8_from_pc();
+        self.reg_instruction_is_cb = false;
 
-        let instruction = &self.instruction_vector[opcode as usize];
+        let instruction = &self.instruction_vector[self.reg_instruction as usize];
         let implementation = instruction.implementation;
         let cycles_before_op = self.cycle_count;
 
-        if self.debug { self.print_instruction(opcode, false) };
+        if self.debug { self.print_instruction() };
         implementation(self);
 
         for _i in cycles_before_op..self.cycle_count {
@@ -143,12 +151,13 @@ impl<'a> CPU<'a> {
     }
 
     fn run_cb_op(&mut self) {
-        let opcode = self.pop_u8_from_pc();
+        self.reg_instruction = self.pop_u8_from_pc();
+        self.reg_instruction_is_cb = true;
 
-        let instruction = &self.cb_instruction_vector[opcode as usize];
+        let instruction = &self.cb_instruction_vector[self.reg_instruction as usize];
         let implementation = instruction.implementation;
 
-        if self.debug { self.print_instruction(opcode, true) };
+        if self.debug { self.print_instruction() };
         implementation(self);
     }
 
@@ -159,4 +168,31 @@ impl<'a> CPU<'a> {
         }
         self.run_op()
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CPU;
+    use super::Flags;
+    use crate::bus::Bus;
+    use crate::cpu::register::DMGRegister;
+
+    #[test]
+    fn cpu_internal_registers() {
+        // XOR A
+        // BIT 7,H
+        let mut cpu = CPU::new(
+            Bus::new_from_vecs(vec![0xAF, 0xCB, 0x7C], vec![]));
+        cpu.step();
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.instruction_address, 0x0000);
+        assert_eq!(cpu.reg_instruction_is_cb, false);
+        assert_eq!(cpu.reg_instruction, 0xAF);
+        cpu.step();
+        assert_eq!(cpu.program_counter.read(), 0x0003);
+        assert_eq!(cpu.instruction_address, 0x0001);
+        assert_eq!(cpu.reg_instruction_is_cb, true);
+        assert_eq!(cpu.reg_instruction, 0x7C);
+    }
+
 }
