@@ -492,7 +492,7 @@ macro_rules! cp {
 }
 
 
-pub const INSTRUCTIONS_NOCB: [Instruction; 160] = [
+pub const INSTRUCTIONS_NOCB: [Instruction; 162] = [
     Instruction{opcode: 0x00, mnemonic: "NOP", description: "No operation",
         length_in_bytes: 1, cycles: "4", flags_changed: "",
         implementation: |cpu| cpu.cycle_count += 4 },
@@ -745,7 +745,22 @@ pub const INSTRUCTIONS_NOCB: [Instruction; 160] = [
         } },
 
     pop!(0xF1, reg_af, "AF"),
+
+    Instruction{opcode: 0xF3, mnemonic: "DI", description: "Disable interrupts",
+        length_in_bytes: 1, cycles: "4", flags_changed: "",
+        implementation: |cpu| {
+            cpu.cycle_count += 4;
+            cpu.interrupts_enabled = false;
+        } },
+
     push!(0xF5, reg_af, "AF"),
+
+    Instruction{opcode: 0xFB, mnemonic: "EI", description: "Enable interrupts",
+        length_in_bytes: 1, cycles: "4", flags_changed: "",
+        implementation: |cpu| {
+            cpu.cycle_count += 4;
+            cpu.interrupts_enabled = true;
+        } },
 
     cp!(0xFE, immediate),
 ];
@@ -2141,6 +2156,26 @@ mod tests {
         assert_eq!(cpu.program_counter.read(), 0x0002);
         assert_eq!(cpu.reg_af.flags, Flags::default());
         assert_eq!(cpu.reg_af.read_higher(), 0x0B);
+    }
+
+    #[test]
+    fn disable_interrupts() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xF3], vec![]));
+        cpu.interrupts_enabled = true;
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 4);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.interrupts_enabled, false);
+    }
+
+    #[test]
+    fn enable_interrupts() {
+        let mut cpu = CPU::new(Bus::new_from_vecs(vec![0xFB], vec![]));
+        cpu.interrupts_enabled = false;
+        cpu.step();
+        assert_eq!(cpu.cycle_count, 4);
+        assert_eq!(cpu.program_counter.read(), 0x0001);
+        assert_eq!(cpu.interrupts_enabled, true);
     }
 
 }

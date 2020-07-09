@@ -21,6 +21,7 @@ pub struct CPU <'a> {
     reg_instruction: u8,
     reg_instruction_is_cb: bool,
     instruction_address: u16,
+    interrupts_enabled: bool,
 }
 
 impl<'a> CPU<'a> {
@@ -67,6 +68,7 @@ impl<'a> CPU<'a> {
             reg_instruction: 0,
             reg_instruction_is_cb: false,
             instruction_address: 0,
+            interrupts_enabled: true,
         }
     }
 
@@ -121,15 +123,12 @@ impl<'a> CPU<'a> {
     fn print_instruction(&mut self) {
         let instruction: &Instruction;
 
-        println!();
-        println!("PC: {:02X}", self.instruction_address);
-
         if self.reg_instruction_is_cb {
             instruction = &self.cb_instruction_vector[self.reg_instruction as usize];
-            print!("CB OP: {:02X}", instruction.opcode);
+            print!("OPCODE CB: {:02X}", instruction.opcode);
         } else {
             instruction = &self.instruction_vector[self.reg_instruction as usize];
-            print!("OP: {:02X}", instruction.opcode);
+            print!("OPCODE: {:02X}", instruction.opcode);
         }
 
         print!(" -- {}", instruction.mnemonic);
